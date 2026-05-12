@@ -1,0 +1,16 @@
+[workspace]
+resolver = "3"
+members = [
+    "aporia-core",
+    "aporia-layout"
+]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+authors = ["Akisaki Titose"]
+
+[workspace.dependencies]
+aporia-core = { path = "aporia-core" }
+aporia-layout = { path = "aporia-layout" }

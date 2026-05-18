@@ -47,8 +47,8 @@ pub enum Sizing {
         max_height: Option<Dimension>,
     },
     Own {
-        width: Option<Dimension>,
-        height: Option<Dimension>,
+        width: Dimension,
+        height: Dimension,
         min_width: Option<Dimension>,
         min_height: Option<Dimension>,
         max_width: Option<Dimension>,
@@ -69,8 +69,8 @@ impl Sizing {
 
     pub fn px(width: f32, height: f32) -> Self {
         Self::Own {
-            width: Some(Dimension::Px(width)),
-            height: Some(Dimension::Px(height)),
+            width: Dimension::Px(width),
+            height: Dimension::Px(height),
             min_width: None,
             min_height: None,
             max_width: None,

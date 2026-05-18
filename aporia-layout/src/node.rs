@@ -86,6 +86,8 @@ pub struct ResolvedLayout {
     pub is_height_changed: bool,
 }
 
+pub(crate) enum OffsetMode {}
+
 pub struct FlexChildLink {
     pub child: *mut LayoutNode,
 

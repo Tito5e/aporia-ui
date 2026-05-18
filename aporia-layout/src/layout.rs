@@ -4,13 +4,17 @@ use crate::style::{Direction, FlexPlacement, Placement, RatioMode, Sizing, WrapM
 use aporia_core::geometry::Size;
 
 pub fn compute_layout(node: &mut LayoutNode, constraint: Constraint) {
+    // Reset Dirty Flags
+    node.clear_dirty();
+
     // PASS-1
+    compute_size(node, constraint);
+
+    // PASS-2
+    compute_offset(node, Size::new(0f32, 0f32));
 }
 
 fn compute_size(node: &mut LayoutNode, constraint: Constraint) {
-    // RESET DIRTY FLAGS
-    node.clear_dirty();
-
     match node {
         LayoutNode::Box(node) => {
             compute_box_layout(node, constraint);
@@ -23,8 +27,8 @@ fn compute_offset(node: &mut LayoutNode, offset: Size) {}
 fn compute_box_layout(node: &mut BoxLayoutNode, constraint: Constraint) {
     let (w, h): (f32, f32) = match node.sizing {
         Sizing::Own { width, height, min_width, max_width, min_height, max_height } => {
-            let mut w = width.map(|d| d.resolve(constraint.max_width)).unwrap_or(0.0);
-            let mut h = height.map(|d| d.resolve(constraint.max_height)).unwrap_or(0.0);
+            let mut w = width.resolve(constraint.max_width);
+            let mut h = height.resolve(constraint.max_height);
 
             if let Some(max_w) = max_width {
                 w = max_w.resolve(constraint.max_width).min(w);
@@ -56,11 +60,8 @@ fn compute_box_layout(node: &mut BoxLayoutNode, constraint: Constraint) {
             let inner_h = h - node.padding.top - node.padding.bottom;
 
             if !node.child.is_null() {
-                compute_layout(
-                    unsafe { &mut *node.child },
-                    Constraint::new(inner_w, inner_h),
-                    Size::new(offset.width + node.padding.left, offset.height + node.padding.top),
-                );
+                compute_layout(unsafe { &mut *node.child }, Constraint::new(inner_w, inner_h));
+                // Size::new(offset.width + node.padding.left, offset.height + node.padding.top),
             }
 
             (w, h)
@@ -140,6 +141,8 @@ fn compute_box_layout(node: &mut BoxLayoutNode, constraint: Constraint) {
 
                 if !node.child.is_null() {
                     compute_layout(unsafe { &mut *node.child }, Constraint::new(inner_w, inner_h));
+
+                    // オフセットメモ Size::new(offset.width + node.padding.left, offset.height + node.padding.top),
                 }
 
                 (w, h)

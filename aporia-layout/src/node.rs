@@ -4,12 +4,20 @@ use aporia_core::geometry::{Rect, Size};
 
 pub enum LayoutNode {
     Box(BoxLayoutNode),
+    Flex(FlexLayoutNode),
 }
 
 impl LayoutNode {
     pub fn clear_dirty(&self) {
         match self {
             LayoutNode::Box(node) => {
+                let self_resolved = unsafe { &mut *node.resolved };
+                self_resolved.is_width_changed = false;
+                self_resolved.is_height_changed = false;
+                self_resolved.is_x_changed = false;
+                self_resolved.is_y_changed = false;
+            }
+            LayoutNode::Flex(node) => {
                 let self_resolved = unsafe { &mut *node.resolved };
                 self_resolved.is_width_changed = false;
                 self_resolved.is_height_changed = false;
@@ -25,9 +33,11 @@ pub(crate) trait LayoutNodeExt {
 }
 
 impl LayoutNodeExt for LayoutNode {
+    #[inline(always)]
     fn resolved_mut(&self) -> &mut ResolvedLayout {
         match self {
             LayoutNode::Box(node) => unsafe { &mut *node.resolved },
+            LayoutNode::Flex(node) => unsafe { &mut *node.resolved },
         }
     }
 }
@@ -43,6 +53,11 @@ pub struct BoxLayoutNode {
     pub child: *mut LayoutNode,
 
     pub resolved: *mut ResolvedLayout,
+}
+
+#[test]
+pub fn layout_node_size() {
+    println!("{}", size_of::<BoxLayoutNode>())
 }
 
 pub struct FlexLayoutNode {
@@ -86,13 +101,13 @@ pub struct ResolvedLayout {
     pub is_height_changed: bool,
 }
 
-pub(crate) enum OffsetMode {}
-
 pub struct FlexChildLink {
     pub child: *mut LayoutNode,
 
     pub prev: *mut FlexChildLink,
     pub next: *mut FlexChildLink,
+
+    pub is_eol: bool,
 }
 
 pub struct GridChildLink {

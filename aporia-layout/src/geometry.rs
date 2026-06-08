@@ -1,8 +1,13 @@
+/// 要素のpaddingを表現します
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Padding {
+    /// padding-topに該当します
     pub top: f32,
+    /// padding-bottomに該当します
     pub bottom: f32,
+    /// padding-leftに該当します
     pub left: f32,
+    /// padding-rightに該当します
     pub right: f32,
 }
 
@@ -38,11 +43,13 @@ impl Dimension {
         match self {
             Dimension::Percent(percent) => constraint * percent,
             Dimension::Px(pixel) => *pixel,
+
             // Dimension::Frは相対単位なので制約ベースでは解決できない
             // 各種レイアウトロジックにおいて特殊実装を持つ
             // また、width, heightなどではそもそも指定の意味を持たない
             // あくまでFlexやGridのTrack指定でのみ意味を持つため、resolveにおいては制約をそのまま返す
-            Dimension::Fr(_) => constraint,
+            // TODO: Frに対して渡すConstraintのみFr(1)の単位長さにすることで統一的に扱える可能性がある
+            Dimension::Fr(fr) => constraint * fr,
         }
     }
 }

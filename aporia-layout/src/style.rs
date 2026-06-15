@@ -54,12 +54,6 @@ pub enum Sizing {
         max_width: Option<Dimension>,
         max_height: Option<Dimension>,
     },
-    Ratio {
-        mode: RatioMode,
-        ratio: f32,
-        max_width: Option<Dimension>,
-        max_height: Option<Dimension>,
-    },
 }
 
 impl Sizing {

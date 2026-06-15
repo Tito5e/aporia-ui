@@ -1,9 +1,10 @@
-use crate::geometry::{Constraint, Dimension, Padding};
-use crate::style::{Direction, FlexPlacement, Placement, Sizing, WrapMode};
-use aporia_core::geometry::{Rect, Size};
+use crate::geometry::{Dimension, Padding};
+use crate::style::{Direction, FlexPlacement, Placement, RatioMode, Sizing, WrapMode};
+use aporia_core::geometry::Rect;
 
 pub enum LayoutNode {
     Box(BoxLayoutNode),
+    Ratio(RatioLayoutNode),
     Flex(FlexLayoutNode),
 }
 
@@ -11,6 +12,13 @@ impl LayoutNode {
     pub fn clear_dirty(&self) {
         match self {
             LayoutNode::Box(node) => {
+                let self_resolved = unsafe { &mut *node.resolved };
+                self_resolved.is_width_changed = false;
+                self_resolved.is_height_changed = false;
+                self_resolved.is_x_changed = false;
+                self_resolved.is_y_changed = false;
+            }
+            LayoutNode::Ratio(node) => {
                 let self_resolved = unsafe { &mut *node.resolved };
                 self_resolved.is_width_changed = false;
                 self_resolved.is_height_changed = false;
@@ -37,6 +45,7 @@ impl LayoutNodeExt for LayoutNode {
     fn resolved_mut(&self) -> &mut ResolvedLayout {
         match self {
             LayoutNode::Box(node) => unsafe { &mut *node.resolved },
+            LayoutNode::Ratio(node) => unsafe { &mut *node.resolved },
             LayoutNode::Flex(node) => unsafe { &mut *node.resolved },
         }
     }
@@ -44,6 +53,22 @@ impl LayoutNodeExt for LayoutNode {
 
 pub struct BoxLayoutNode {
     pub sizing: Sizing,
+    pub padding: Padding,
+
+    pub row_placement: Placement,
+    pub col_placement: Placement,
+
+    pub parent: *mut LayoutNode,
+    pub child: *mut LayoutNode,
+
+    pub resolved: *mut ResolvedLayout,
+}
+
+pub struct RatioLayoutNode {
+    pub mode: RatioMode,
+    pub ratio: f32,
+    pub max_width: Option<Dimension>,
+    pub max_height: Option<Dimension>,
     pub padding: Padding,
 
     pub row_placement: Placement,
@@ -66,6 +91,7 @@ pub struct FlexLayoutNode {
 
     pub direction: Direction,
     pub wrap_mode: WrapMode,
+
     pub row_placement: FlexPlacement,
     pub col_placement: FlexPlacement,
     pub row_gap: f32,

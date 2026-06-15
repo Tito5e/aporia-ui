@@ -1,6 +1,6 @@
 use crate::geometry::Constraint;
 use crate::node::{BoxLayoutNode, FlexLayoutNode, LayoutNode, LayoutNodeExt};
-use crate::style::{Direction, FlexPlacement, Placement, RatioMode, Sizing, WrapMode};
+use crate::style::{Direction, Placement, RatioMode, Sizing, WrapMode};
 use aporia_core::geometry::Size;
 
 pub fn compute_layout(node: &mut LayoutNode, constraint: Constraint) {
@@ -19,6 +19,9 @@ fn compute_size(node: &mut LayoutNode, constraint: Constraint) {
         LayoutNode::Box(node) => {
             compute_box_size(node, constraint);
         }
+        LayoutNode::Ratio(node) => {
+            compute_ratio_size(node, constraint);
+        }
         LayoutNode::Flex(node) => {
             compute_flex_size(node, constraint);
         }
@@ -29,6 +32,9 @@ fn compute_offset(node: &mut LayoutNode, offset: Size) {
     match node {
         LayoutNode::Box(node) => {
             compute_box_offset(node, offset);
+        }
+        LayoutNode::Ratio(node) => {
+            compute_ratio_offset(node, offset);
         }
         LayoutNode::Flex(node) => {
             compute_flex_offset(node, offset);

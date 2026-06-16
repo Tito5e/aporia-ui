@@ -38,50 +38,37 @@ pub enum WrapMode {
     WrapReverse,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Sizing {
-    Fit {
-        min_width: Option<Dimension>,
-        min_height: Option<Dimension>,
-        max_width: Option<Dimension>,
-        max_height: Option<Dimension>,
-    },
-    Own {
-        width: Dimension,
-        height: Dimension,
-        min_width: Option<Dimension>,
-        min_height: Option<Dimension>,
-        max_width: Option<Dimension>,
-        max_height: Option<Dimension>,
-    },
-}
+#[derive(Debug, Clone, PartialEq)]
+pub struct BoxStyle {
+    pub width: Option<Dimension>,
+    pub height: Option<Dimension>,
+    pub min_width: Option<Dimension>,
+    pub min_height: Option<Dimension>,
+    pub max_width: Option<Dimension>,
+    pub max_height: Option<Dimension>,
 
-impl Sizing {
-    pub fn fit() -> Self {
-        Self::Fit { min_width: None, min_height: None, max_width: None, max_height: None }
-    }
-
-    pub fn px(width: f32, height: f32) -> Self {
-        Self::Own {
-            width: Dimension::Px(width),
-            height: Dimension::Px(height),
-            min_width: None,
-            min_height: None,
-            max_width: None,
-            max_height: None,
-        }
-    }
+    pub padding: Padding,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct BoxStyle {
-    pub sizing: Sizing,
+pub struct RatioStyle {
+    pub mode: RatioMode,
+    pub ratio: f32,
+    pub max_width: Option<Dimension>,
+    pub max_height: Option<Dimension>,
+
     pub padding: Padding,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FlexStyle {
-    pub sizing: Sizing,
+    pub width: Option<Dimension>,
+    pub height: Option<Dimension>,
+    pub min_width: Option<Dimension>,
+    pub min_height: Option<Dimension>,
+    pub max_width: Option<Dimension>,
+    pub max_height: Option<Dimension>,
+
     pub padding: Padding,
     pub direction: Direction,
     pub wrap_mode: WrapMode,
@@ -93,7 +80,13 @@ pub struct FlexStyle {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GridStyle {
-    pub sizing: Sizing,
+    pub width: Option<Dimension>,
+    pub height: Option<Dimension>,
+    pub min_width: Option<Dimension>,
+    pub min_height: Option<Dimension>,
+    pub max_width: Option<Dimension>,
+    pub max_height: Option<Dimension>,
+
     pub padding: Padding,
     pub direction: Direction,
     pub row_gap: f32,

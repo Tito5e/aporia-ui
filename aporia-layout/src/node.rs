@@ -1,5 +1,5 @@
 use crate::geometry::{Dimension, Padding};
-use crate::style::{Direction, FlexPlacement, Placement, RatioMode, Sizing, WrapMode};
+use crate::style::{Direction, FlexPlacement, Placement, RatioMode, WrapMode};
 use aporia_core::geometry::Rect;
 
 pub enum LayoutNode {
@@ -52,7 +52,13 @@ impl LayoutNodeExt for LayoutNode {
 }
 
 pub struct BoxLayoutNode {
-    pub sizing: Sizing,
+    pub width: Option<Dimension>,
+    pub height: Option<Dimension>,
+    pub min_width: Option<Dimension>,
+    pub min_height: Option<Dimension>,
+    pub max_width: Option<Dimension>,
+    pub max_height: Option<Dimension>,
+
     pub padding: Padding,
 
     pub row_placement: Placement,
@@ -86,7 +92,13 @@ pub fn layout_node_size() {
 }
 
 pub struct FlexLayoutNode {
-    pub sizing: Sizing,
+    pub width: Option<Dimension>,
+    pub height: Option<Dimension>,
+    pub min_width: Option<Dimension>,
+    pub min_height: Option<Dimension>,
+    pub max_width: Option<Dimension>,
+    pub max_height: Option<Dimension>,
+
     pub padding: Padding,
 
     pub direction: Direction,
@@ -104,7 +116,13 @@ pub struct FlexLayoutNode {
 }
 
 pub struct GridLayoutNode {
-    pub sizing: Sizing,
+    pub width: Option<Dimension>,
+    pub height: Option<Dimension>,
+    pub min_width: Option<Dimension>,
+    pub min_height: Option<Dimension>,
+    pub max_width: Option<Dimension>,
+    pub max_height: Option<Dimension>,
+
     pub padding: Padding,
 
     pub direction: Direction,

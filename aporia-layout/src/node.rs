@@ -115,7 +115,7 @@ pub struct FlexLayoutNode {
     pub child_head: *mut FlexChildLink,
 
     pub resolved: *mut ResolvedLayout,
-    // This is cache !! DONT USE !!
+    // This is cache !! DON'T USE !!
     pub cross_axis_gap_edge: f32,
     pub cross_axis_gap_between: f32,
 }

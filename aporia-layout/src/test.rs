@@ -233,7 +233,7 @@ fn box_min_max_constraints() {
     // (Note: Child Percent size resolves against parent size which is currently unknown during compute_size
     // but in this implementation Box(None) fits child. If child is Box(100.0), it's a bit circular.
     // Let's use a fixed size child for constraint testing)
-    let mut child_fixed = BoxLayoutNode {
+    let child_fixed = BoxLayoutNode {
         width: Some(Dimension::Px(100.0)),
         height: Some(Dimension::Px(100.0)),
         min_width: None,

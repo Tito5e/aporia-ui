@@ -1,9 +1,7 @@
 use crate::geometry::{Constraint, Dimension, Padding};
 use crate::layout::compute_layout;
-use crate::node::{
-    BoxLayoutNode, LayoutNode, LayoutNodeExt, ResolvedLayout,
-};
-use crate::style::{Placement};
+use crate::node::{BoxLayoutNode, LayoutNode, ResolvedLayout};
+use crate::style::Placement;
 use aporia_core::geometry::Rect;
 use std::ptr;
 
@@ -75,7 +73,12 @@ fn box_in_box_exhaustive_width() {
                     assert!(
                         (child_res.rect.x - expected_x).abs() < 0.1,
                         "Failed: rp={:?}, pad={}, cw={}, pw={}. Expected x={}, got {}",
-                        rp, pad, cw, pw, expected_x, child_res.rect.x
+                        rp,
+                        pad,
+                        cw,
+                        pw,
+                        expected_x,
+                        child_res.rect.x
                     );
                 }
             }

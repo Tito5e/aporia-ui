@@ -9,6 +9,7 @@ pub enum LayoutNode {
 }
 
 impl LayoutNode {
+    #[inline(always)]
     pub fn clear_dirty(&self) {
         match self {
             LayoutNode::Box(node) => {
@@ -152,6 +153,7 @@ pub struct ResolvedLayout {
 const LAYOUT_THRESHOLD: f32 = 0.01;
 
 impl ResolvedLayout {
+    #[inline(always)]
     pub(crate) fn update_width(&mut self, width: f32) {
         if (self.rect.width - width).abs() > LAYOUT_THRESHOLD {
             self.is_width_changed = true;
@@ -159,6 +161,7 @@ impl ResolvedLayout {
         }
     }
 
+    #[inline(always)]
     pub(crate) fn update_height(&mut self, height: f32) {
         if (self.rect.height - height).abs() > LAYOUT_THRESHOLD {
             self.is_height_changed = true;
@@ -166,6 +169,7 @@ impl ResolvedLayout {
         }
     }
 
+    #[inline(always)]
     pub(crate) fn update_x(&mut self, x: f32) {
         if (self.rect.x - x).abs() > LAYOUT_THRESHOLD {
             self.is_x_changed = true;
@@ -173,6 +177,7 @@ impl ResolvedLayout {
         }
     }
 
+    #[inline(always)]
     pub(crate) fn update_y(&mut self, y: f32) {
         if (self.rect.y - y).abs() > LAYOUT_THRESHOLD {
             self.is_y_changed = true;

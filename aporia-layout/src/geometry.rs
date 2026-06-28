@@ -45,9 +45,8 @@ impl Dimension {
             Dimension::Px(pixel) => *pixel,
 
             // Dimension::Frは相対単位なので制約ベースでは解決できない
-            // 各種レイアウトロジックにおいて特殊実装を持つ
-            // また、width, heightなどではそもそも指定の意味を持たない
-            // あくまでFlexやGridのTrack指定でのみ意味を持つため、resolveにおいては制約をそのまま返す
+            // Dimension::Frに対応する各種レイアウトロジックにおいて特殊実装を持つことになる
+            // 対応していない場合ではPercentど同じ挙動を取るように設定されている
             // TODO: Frに対して渡すConstraintのみFr(1)の単位長さにすることで統一的に扱える可能性がある
             Dimension::Fr(fr) => constraint * fr,
         }

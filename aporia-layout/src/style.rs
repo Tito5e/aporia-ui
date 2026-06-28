@@ -23,11 +23,19 @@ pub enum RatioMode {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FlexPlacement {
+    // 左端から揃えていく
     Start,
+    // 右端から揃えていく
     End,
-    Center, // unsafe-centerに該当する動作を行う、safe-centerは将来的に実装する
+    // unsafe-centerに該当する動作を行う、safe-centerは将来的に実装する
+    Center,
+    // 仮に範囲からはみ出す場合、Startにfallbackする
+    SafeCenter,
+    // 要素の中間部分のみに余白を配分する
     SpaceBetween,
+    // 要素の左右に余白を配分する
     SpaceAround,
+    // 要素の左右に余白を配分するが、要素の左端と右端、そして中間の余白が同一になるようにする
     SpaceEvenly,
 }
 

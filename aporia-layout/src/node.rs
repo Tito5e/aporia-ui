@@ -106,6 +106,7 @@ pub struct FlexLayoutNode {
 
     pub row_placement: FlexPlacement,
     pub col_placement: FlexPlacement,
+    pub line_placement: Placement,
     pub row_gap: f32,
     pub col_gap: f32,
 
@@ -113,6 +114,9 @@ pub struct FlexLayoutNode {
     pub child_head: *mut FlexChildLink,
 
     pub resolved: *mut ResolvedLayout,
+    // This is cache !! DONT USE !!
+    pub cross_axis_gap_edge: f32,
+    pub cross_axis_gap_between: f32,
 }
 
 pub struct GridLayoutNode {

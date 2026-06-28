@@ -1,8 +1,7 @@
 use crate::geometry::{Constraint, Dimension, Padding};
 use crate::layout::compute_layout;
 use crate::node::{
-    BoxLayoutNode, FlexChildLink, FlexLayoutNode, LayoutNode, LayoutNodeExt, RatioLayoutNode,
-    ResolvedLayout,
+    BoxLayoutNode, FlexChildLink, FlexLayoutNode, LayoutNode, RatioLayoutNode, ResolvedLayout,
 };
 use crate::style::{Direction, FlexPlacement, Placement, RatioMode, WrapMode};
 use aporia_core::geometry::Rect;
@@ -18,8 +17,6 @@ fn create_resolved() -> ResolvedLayout {
         is_height_changed: false,
     }
 }
-
-// === Box Parent -> Box Child Combinations ===
 
 #[test]
 fn box_in_box_alignment_start() {
@@ -230,39 +227,10 @@ fn ratio_in_box_height_mode_center() {
 #[test]
 fn box_min_max_constraints() {
     let mut child_res = create_resolved();
-    let mut child = LayoutNode::Box(BoxLayoutNode {
-        width: Some(Dimension::Percent(1.0)),
-        height: Some(Dimension::Percent(1.0)),
-        min_width: None,
-        min_height: None,
-        max_width: None,
-        max_height: None,
-        padding: Padding::tblr(0., 0., 0., 0.),
-        row_placement: Placement::Start,
-        col_placement: Placement::Start,
-        parent: ptr::null_mut(),
-        child: ptr::null_mut(),
-        resolved: &mut child_res,
-    });
-
     let mut parent_res = create_resolved();
-    let mut parent = LayoutNode::Box(BoxLayoutNode {
-        width: None,
-        height: None,
-        min_width: Some(Dimension::Px(150.0)),
-        min_height: Some(Dimension::Px(150.0)),
-        max_width: Some(Dimension::Px(180.0)),
-        max_height: Some(Dimension::Px(180.0)),
-        padding: Padding::tblr(0., 0., 0., 0.),
-        row_placement: Placement::Start,
-        col_placement: Placement::Start,
-        parent: ptr::null_mut(),
-        child: &mut child,
-        resolved: &mut parent_res,
-    });
 
     // Case 1: Child is small, parent should be min_size
-    // (Note: Child Percent size resolves against parent size which is currently unknown during compute_size 
+    // (Note: Child Percent size resolves against parent size which is currently unknown during compute_size
     // but in this implementation Box(None) fits child. If child is Box(100.0), it's a bit circular.
     // Let's use a fixed size child for constraint testing)
     let mut child_fixed = BoxLayoutNode {
@@ -350,14 +318,10 @@ fn flex_row_no_wrap_alignment() {
         child: &mut c2,
         prev: ptr::null_mut(),
         next: ptr::null_mut(),
-        is_eol: false,
+        is_eol: true,
     };
-    let mut link1 = FlexChildLink {
-        child: &mut c1,
-        prev: ptr::null_mut(),
-        next: &mut link2,
-        is_eol: false,
-    };
+    let mut link1 =
+        FlexChildLink { child: &mut c1, prev: ptr::null_mut(), next: &mut link2, is_eol: false };
     link2.prev = &mut link1;
 
     let mut parent_res = create_resolved();
@@ -378,6 +342,9 @@ fn flex_row_no_wrap_alignment() {
         parent: ptr::null_mut(),
         child_head: &mut link1,
         resolved: &mut parent_res,
+        cross_axis_gap_between: 0f32,
+        cross_axis_gap_edge: 0f32,
+        line_placement: Placement::Start,
     });
 
     compute_layout(&mut parent, Constraint::new(200.0, 100.0));
@@ -430,14 +397,10 @@ fn flex_column_wrap_alignment() {
         child: &mut c2,
         prev: ptr::null_mut(),
         next: ptr::null_mut(),
-        is_eol: false,
+        is_eol: true,
     };
-    let mut link1 = FlexChildLink {
-        child: &mut c1,
-        prev: ptr::null_mut(),
-        next: &mut link2,
-        is_eol: false,
-    };
+    let mut link1 =
+        FlexChildLink { child: &mut c1, prev: ptr::null_mut(), next: &mut link2, is_eol: false };
     link2.prev = &mut link1;
 
     let mut parent_res = create_resolved();
@@ -458,6 +421,9 @@ fn flex_column_wrap_alignment() {
         parent: ptr::null_mut(),
         child_head: &mut link1,
         resolved: &mut parent_res,
+        line_placement: Placement::Start,
+        cross_axis_gap_edge: 0f32,
+        cross_axis_gap_between: 0f32,
     });
 
     compute_layout(&mut parent, Constraint::new(200.0, 200.0));

@@ -6,6 +6,7 @@ pub enum LayoutNode {
     Box(BoxLayoutNode),
     Ratio(RatioLayoutNode),
     Flex(FlexLayoutNode),
+    Grid(GridLayoutNode),
 }
 
 impl LayoutNode {
@@ -33,6 +34,13 @@ impl LayoutNode {
                 self_resolved.is_x_changed = false;
                 self_resolved.is_y_changed = false;
             }
+            LayoutNode::Grid(node) => {
+                let self_resolved = unsafe { &mut *node.resolved };
+                self_resolved.is_width_changed = false;
+                self_resolved.is_height_changed = false;
+                self_resolved.is_x_changed = false;
+                self_resolved.is_y_changed = false;
+            }
         }
     }
 }
@@ -48,6 +56,7 @@ impl LayoutNodeExt for LayoutNode {
             LayoutNode::Box(node) => unsafe { &mut *node.resolved },
             LayoutNode::Ratio(node) => unsafe { &mut *node.resolved },
             LayoutNode::Flex(node) => unsafe { &mut *node.resolved },
+            LayoutNode::Grid(node) => unsafe { &mut *node.resolved },
         }
     }
 }
@@ -131,15 +140,21 @@ pub struct GridLayoutNode {
     pub padding: Padding,
 
     pub direction: Direction,
+    pub wrap_size: usize,
+
+    pub row_placement: FlexPlacement,
+    pub col_placement: FlexPlacement,
     pub row_gap: f32,
     pub col_gap: f32,
-    pub default_row_track: Dimension,
-    pub default_col_track: Dimension,
 
     pub parent: *mut LayoutNode,
     pub child_head: *mut GridChildLink,
 
     pub resolved: *mut ResolvedLayout,
+    // This is cache !! DON'T UPDATE MANUALLY !!
+    pub item_count: usize,
+    pub row_axis_sizes: Vec<f32>,
+    pub col_axis_sizes: Vec<f32>,
 }
 
 pub struct ResolvedLayout {

@@ -99,6 +99,4 @@ pub struct GridStyle {
     pub direction: Direction,
     pub row_gap: f32,
     pub col_gap: f32,
-    pub default_row_track: Dimension,
-    pub default_col_track: Dimension,
 }

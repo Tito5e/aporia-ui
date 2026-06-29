@@ -1,5 +1,7 @@
 use crate::geometry::{Constraint, Dimension};
-use crate::node::{BoxLayoutNode, FlexLayoutNode, LayoutNode, LayoutNodeExt, RatioLayoutNode};
+use crate::node::{
+    BoxLayoutNode, FlexLayoutNode, GridLayoutNode, LayoutNode, LayoutNodeExt, RatioLayoutNode,
+};
 use crate::style::{Direction, FlexPlacement, Placement, RatioMode, WrapMode};
 use aporia_core::geometry::Size;
 
@@ -25,6 +27,9 @@ fn compute_size(node: &mut LayoutNode, constraint: Constraint) {
         LayoutNode::Flex(node) => {
             compute_flex_size(node, constraint);
         }
+        LayoutNode::Grid(node) => {
+            compute_grid_size(node, constraint);
+        }
     }
 }
 
@@ -38,6 +43,9 @@ fn compute_offset(node: &mut LayoutNode, offset: Size) {
         }
         LayoutNode::Flex(node) => {
             compute_flex_offset(node, offset);
+        }
+        LayoutNode::Grid(node) => {
+            compute_grid_offset(node, offset);
         }
     }
 }
@@ -761,6 +769,191 @@ fn compute_flex_offset(node: &mut FlexLayoutNode, offset: Size) {
                 }
             }
         }
+    }
+}
+
+fn compute_grid_size(node: &mut GridLayoutNode, constraint: Constraint) {
+    let outer_width_constraint =
+        resolve_constraint(node.width, node.min_width, node.max_width, constraint.max_width);
+    let outer_height_constraint =
+        resolve_constraint(node.height, node.min_height, node.max_height, constraint.max_height);
+
+    let inner_width_constraint = outer_width_constraint - node.padding.left - node.padding.right;
+    let inner_height_constraint = outer_height_constraint - node.padding.top - node.padding.bottom;
+
+    match node.direction {
+        Direction::Row => {
+            let mut row_track_sizes: Vec<f32> = vec![0f32; node.wrap_size];
+            let mut col_track_sizes: Vec<f32> =
+                vec![0f32; node.item_count.div_ceil(node.wrap_size)];
+
+            let mut child_pointer = node.child_head;
+            let mut idx = 0;
+            loop {
+                let child_link = unsafe { &*child_pointer };
+                {
+                    let child = unsafe { &mut *child_link.child };
+                    compute_size(
+                        child,
+                        Constraint::new(inner_width_constraint, inner_height_constraint),
+                    );
+                }
+                let child = unsafe { &*child_link.child };
+                row_track_sizes[idx % node.wrap_size] =
+                    row_track_sizes[idx % node.wrap_size].max(child.resolved_mut().rect.width);
+                col_track_sizes[idx / node.wrap_size] =
+                    col_track_sizes[idx / node.wrap_size].max(child.resolved_mut().rect.height);
+                if child_link.next.is_null() {
+                    break;
+                }
+                child_pointer = child_link.next;
+                idx += 1;
+            }
+
+            node.row_axis_sizes = row_track_sizes;
+            node.col_axis_sizes = col_track_sizes;
+        }
+        Direction::Column => {
+            let mut col_track_sizes: Vec<f32> = vec![0f32; node.wrap_size];
+            let mut row_track_sizes: Vec<f32> =
+                vec![0f32; node.item_count.div_ceil(node.wrap_size)];
+
+            let mut child_pointer = node.child_head;
+            let mut idx = 0;
+            loop {
+                let child_link = unsafe { &*child_pointer };
+                {
+                    let child = unsafe { &mut *child_link.child };
+                    compute_size(
+                        child,
+                        Constraint::new(inner_width_constraint, inner_height_constraint),
+                    );
+                }
+                let child = unsafe { &*child_link.child };
+                col_track_sizes[idx % node.wrap_size] =
+                    col_track_sizes[idx % node.wrap_size].max(child.resolved_mut().rect.width);
+                row_track_sizes[idx / node.wrap_size] =
+                    row_track_sizes[idx / node.wrap_size].max(child.resolved_mut().rect.height);
+                if child_link.next.is_null() {
+                    break;
+                }
+                child_pointer = child_link.next;
+                idx += 1;
+            }
+
+            node.row_axis_sizes = row_track_sizes;
+            node.col_axis_sizes = col_track_sizes;
+        }
+    }
+}
+
+fn compute_grid_offset(node: &mut GridLayoutNode, offset: Size) {
+    let self_resolved = unsafe { &mut *node.resolved };
+
+    self_resolved.update_x(offset.width);
+    self_resolved.update_y(offset.height);
+
+    if node.child_head.is_null() {
+        return;
+    }
+
+    let inner_width = self_resolved.rect.width - node.padding.left - node.padding.right;
+    let inner_height = self_resolved.rect.height - node.padding.top - node.padding.bottom;
+
+    let (occupied_row_gap, occupied_col_gap) = match node.direction {
+        Direction::Row => (
+            node.row_gap * node.wrap_size as f32,
+            node.col_gap * node.item_count.div_ceil(node.wrap_size) as f32,
+        ),
+        Direction::Column => (
+            node.row_gap * node.item_count.div_ceil(node.wrap_size) as f32,
+            node.col_gap * node.wrap_size as f32,
+        ),
+    };
+
+    // TODO: SIMDによるsumの高速化
+    let occupied_col_placement =
+        inner_height - node.col_axis_sizes.iter().sum::<f32>() - occupied_col_gap;
+    let (occupied_row_placement_edge, occupied_row_placement_between) = resolve_flex_placement(
+        node.row_placement,
+        inner_width,
+        node.row_axis_sizes.iter().sum::<f32>(),
+        match node.direction {
+            Direction::Row => node.wrap_size,
+            Direction::Column => node.item_count.div_ceil(node.wrap_size),
+        },
+        node.row_gap,
+    );
+    let (occupied_col_placement_edge, occupied_col_placement_between) = resolve_flex_placement(
+        node.col_placement,
+        inner_height,
+        node.col_axis_sizes.iter().sum::<f32>(),
+        match node.direction {
+            Direction::Row => node.item_count.div_ceil(node.wrap_size),
+            Direction::Column => node.wrap_size,
+        },
+        node.col_gap,
+    );
+
+    let mut accum_width = occupied_row_placement_edge;
+    let mut accum_height = occupied_col_placement_edge;
+    let mut child_pointer = node.child_head;
+    let mut axis_idx = 0;
+
+    println!(
+        "{} {}, {} {}",
+        occupied_row_placement_edge,
+        occupied_row_placement_between,
+        occupied_col_placement_edge,
+        occupied_col_placement_between
+    );
+
+    match node.direction {
+        Direction::Row => 'col: loop {
+            for i in 0..node.wrap_size {
+                let child_link = unsafe { &*child_pointer };
+                let child = unsafe { &mut *child_link.child };
+
+                let child_local_width_offset = match child_link.row_placement {
+                    Placement::Start => 0f32,
+                    Placement::End => node.row_axis_sizes[i] - child.resolved_mut().rect.width,
+                    Placement::Center => {
+                        (node.row_axis_sizes[i] - child.resolved_mut().rect.width) / 2f32
+                    }
+                };
+                let child_local_height_offset = match child_link.col_placement {
+                    Placement::Start => 0f32,
+                    Placement::End => {
+                        node.col_axis_sizes[axis_idx] - child.resolved_mut().rect.height
+                    }
+                    Placement::Center => {
+                        (node.col_axis_sizes[axis_idx] - child.resolved_mut().rect.height) / 2f32
+                    }
+                };
+
+                compute_offset(
+                    child,
+                    Size::new(
+                        accum_width + child_local_width_offset,
+                        accum_height + child_local_height_offset,
+                    ),
+                );
+
+                if child_link.next.is_null() {
+                    break 'col;
+                }
+
+                child_pointer = child_link.next;
+
+                accum_width +=
+                    occupied_row_placement_between + node.row_gap + node.row_axis_sizes[i];
+            }
+            accum_width = occupied_row_placement_edge;
+            accum_height +=
+                occupied_col_placement_between + node.col_gap + node.col_axis_sizes[axis_idx];
+            axis_idx += 1;
+        },
+        Direction::Column => {}
     }
 }
 

@@ -68,7 +68,7 @@ fn compute_box_size(node: &mut BoxLayoutNode, constraint: Constraint) {
         );
     }
 
-    let self_resolved = unsafe { &mut *node.resolved };
+    let self_resolved = &mut node.resolved;
 
     match node.width {
         Some(_) => {
@@ -76,8 +76,8 @@ fn compute_box_size(node: &mut BoxLayoutNode, constraint: Constraint) {
         }
         None => {
             let mut self_width = if !node.child.is_null() {
-                let child = unsafe { &*node.child };
-                let child_resolved = child.resolved_mut();
+                let child = unsafe { &mut *node.child };
+                let child_resolved = child.resolved();
 
                 child_resolved.rect.width + node.padding.left + node.padding.right
             } else {
@@ -100,8 +100,8 @@ fn compute_box_size(node: &mut BoxLayoutNode, constraint: Constraint) {
         }
         None => {
             let mut self_height = if !node.child.is_null() {
-                let child = unsafe { &*node.child };
-                let child_resolved = child.resolved_mut();
+                let child = unsafe { &mut *node.child };
+                let child_resolved = child.resolved();
 
                 child_resolved.rect.height + node.padding.top + node.padding.bottom
             } else {
@@ -121,14 +121,14 @@ fn compute_box_size(node: &mut BoxLayoutNode, constraint: Constraint) {
 }
 
 fn compute_box_offset(node: &mut BoxLayoutNode, offset: Size) {
-    let self_resolved = unsafe { &mut *node.resolved };
+    let self_resolved = &mut node.resolved;
 
     self_resolved.update_x(offset.width);
     self_resolved.update_y(offset.height);
 
     if !node.child.is_null() {
         let child = unsafe { &mut *node.child };
-        let inner_resolved = child.resolved_mut();
+        let inner_resolved = child.resolved();
 
         let local_offset_x = match node.row_placement {
             Placement::Start => 0f32,
@@ -240,7 +240,7 @@ fn compute_ratio_size(node: &mut RatioLayoutNode, constraint: Constraint) {
         }
     };
 
-    let self_resolved = unsafe { &mut *node.resolved };
+    let self_resolved = &mut node.resolved;
 
     self_resolved.update_width(width);
     self_resolved.update_height(height);
@@ -254,14 +254,14 @@ fn compute_ratio_size(node: &mut RatioLayoutNode, constraint: Constraint) {
 }
 
 fn compute_ratio_offset(node: &mut RatioLayoutNode, offset: Size) {
-    let self_resolved = unsafe { &mut *node.resolved };
+    let self_resolved = &mut node.resolved;
 
     self_resolved.update_x(offset.width);
     self_resolved.update_y(offset.height);
 
     if !node.child.is_null() {
         let child = unsafe { &mut *node.child };
-        let inner_resolved = child.resolved_mut();
+        let inner_resolved = child.resolved();
 
         let local_offset_x = match node.row_placement {
             Placement::Start => 0f32,
@@ -331,7 +331,7 @@ fn compute_flex_size(node: &mut FlexLayoutNode, constraint: Constraint) {
                             );
                         }
                         let child_node = unsafe { &mut *child.child };
-                        let child_resolved = child_node.resolved_mut();
+                        let child_resolved = child_node.resolved();
                         occupied_width += child_resolved.rect.width;
                         occupied_height = occupied_height.max(child_resolved.rect.height);
 
@@ -362,7 +362,7 @@ fn compute_flex_size(node: &mut FlexLayoutNode, constraint: Constraint) {
                         }
 
                         let child_node = unsafe { &mut *child.child };
-                        let child_resolved = child_node.resolved_mut();
+                        let child_resolved = child_node.resolved();
 
                         if inner_width_constraint < line_occupied_width + child_resolved.rect.width
                         {
@@ -421,7 +421,7 @@ fn compute_flex_size(node: &mut FlexLayoutNode, constraint: Constraint) {
                             );
                         }
                         let child_node = unsafe { &mut *child.child };
-                        let child_resolved = child_node.resolved_mut();
+                        let child_resolved = child_node.resolved();
                         occupied_width = occupied_width.max(child_resolved.rect.width);
                         occupied_height += child_resolved.rect.height;
 
@@ -452,7 +452,7 @@ fn compute_flex_size(node: &mut FlexLayoutNode, constraint: Constraint) {
                         }
 
                         let child_node = unsafe { &mut *child.child };
-                        let child_resolved = child_node.resolved_mut();
+                        let child_resolved = child_node.resolved();
 
                         if inner_height_constraint
                             < line_occupied_height + child_resolved.rect.height
@@ -499,7 +499,7 @@ fn compute_flex_size(node: &mut FlexLayoutNode, constraint: Constraint) {
         }
     }
 
-    let self_resolved = unsafe { &mut *node.resolved };
+    let self_resolved = &mut node.resolved;
 
     let outer_width = match node.width {
         Some(_) => {
@@ -574,7 +574,7 @@ fn compute_flex_size(node: &mut FlexLayoutNode, constraint: Constraint) {
 }
 
 fn compute_flex_offset(node: &mut FlexLayoutNode, offset: Size) {
-    let self_resolved = unsafe { &mut *node.resolved };
+    let self_resolved = &mut node.resolved;
 
     self_resolved.update_x(offset.width);
     self_resolved.update_y(offset.height);
@@ -607,8 +607,8 @@ fn compute_flex_offset(node: &mut FlexLayoutNode, offset: Size) {
                 loop {
                     line_count += 1;
                     let pre_child_link = unsafe { &mut *pre_child_pointer };
-                    let pre_child = unsafe { &*pre_child_link.child };
-                    let pre_layout = pre_child.resolved_mut();
+                    let pre_child = unsafe { &mut *pre_child_link.child };
+                    let pre_layout = pre_child.resolved();
                     occupied_width += pre_layout.rect.width;
                     occupied_height = occupied_height.max(pre_layout.rect.height);
 
@@ -630,7 +630,7 @@ fn compute_flex_offset(node: &mut FlexLayoutNode, offset: Size) {
 
                 loop {
                     let child_link = unsafe { &mut *child_pointer };
-                    let child = unsafe { &*child_link.child };
+                    let child = unsafe { &mut *child_link.child };
                     let layout = child.resolved_mut();
 
                     layout.update_x(accum_width);
@@ -700,8 +700,8 @@ fn compute_flex_offset(node: &mut FlexLayoutNode, offset: Size) {
                 loop {
                     line_count += 1;
                     let pre_child_link = unsafe { &mut *pre_child_pointer };
-                    let pre_child = unsafe { &*pre_child_link.child };
-                    let pre_layout = pre_child.resolved_mut();
+                    let pre_child = unsafe { &mut *pre_child_link.child };
+                    let pre_layout = pre_child.resolved();
                     occupied_width = occupied_width.max(pre_layout.rect.width);
                     occupied_height += pre_layout.rect.height;
 
@@ -723,7 +723,7 @@ fn compute_flex_offset(node: &mut FlexLayoutNode, offset: Size) {
 
                 loop {
                     let child_link = unsafe { &mut *child_pointer };
-                    let child = unsafe { &*child_link.child };
+                    let child = unsafe { &mut *child_link.child };
                     let layout = child.resolved_mut();
 
                     layout.update_y(accum_height);
@@ -798,11 +798,11 @@ fn compute_grid_size(node: &mut GridLayoutNode, constraint: Constraint) {
                         Constraint::new(inner_width_constraint, inner_height_constraint),
                     );
                 }
-                let child = unsafe { &*child_link.child };
+                let child = unsafe { &mut *child_link.child };
                 row_track_sizes[idx % node.wrap_size] =
-                    row_track_sizes[idx % node.wrap_size].max(child.resolved_mut().rect.width);
+                    row_track_sizes[idx % node.wrap_size].max(child.resolved().rect.width);
                 col_track_sizes[idx / node.wrap_size] =
-                    col_track_sizes[idx / node.wrap_size].max(child.resolved_mut().rect.height);
+                    col_track_sizes[idx / node.wrap_size].max(child.resolved().rect.height);
                 if child_link.next.is_null() {
                     break;
                 }
@@ -829,11 +829,11 @@ fn compute_grid_size(node: &mut GridLayoutNode, constraint: Constraint) {
                         Constraint::new(inner_width_constraint, inner_height_constraint),
                     );
                 }
-                let child = unsafe { &*child_link.child };
+                let child = unsafe { &mut *child_link.child };
                 col_track_sizes[idx % node.wrap_size] =
-                    col_track_sizes[idx % node.wrap_size].max(child.resolved_mut().rect.width);
+                    col_track_sizes[idx % node.wrap_size].max(child.resolved().rect.width);
                 row_track_sizes[idx / node.wrap_size] =
-                    row_track_sizes[idx / node.wrap_size].max(child.resolved_mut().rect.height);
+                    row_track_sizes[idx / node.wrap_size].max(child.resolved().rect.height);
                 if child_link.next.is_null() {
                     break;
                 }
@@ -848,7 +848,7 @@ fn compute_grid_size(node: &mut GridLayoutNode, constraint: Constraint) {
 }
 
 fn compute_grid_offset(node: &mut GridLayoutNode, offset: Size) {
-    let self_resolved = unsafe { &mut *node.resolved };
+    let self_resolved = &mut node.resolved;
 
     self_resolved.update_x(offset.width);
     self_resolved.update_y(offset.height);
@@ -916,18 +916,16 @@ fn compute_grid_offset(node: &mut GridLayoutNode, offset: Size) {
 
                 let child_local_width_offset = match child_link.row_placement {
                     Placement::Start => 0f32,
-                    Placement::End => node.row_axis_sizes[i] - child.resolved_mut().rect.width,
+                    Placement::End => node.row_axis_sizes[i] - child.resolved().rect.width,
                     Placement::Center => {
-                        (node.row_axis_sizes[i] - child.resolved_mut().rect.width) / 2f32
+                        (node.row_axis_sizes[i] - child.resolved().rect.width) / 2f32
                     }
                 };
                 let child_local_height_offset = match child_link.col_placement {
                     Placement::Start => 0f32,
-                    Placement::End => {
-                        node.col_axis_sizes[axis_idx] - child.resolved_mut().rect.height
-                    }
+                    Placement::End => node.col_axis_sizes[axis_idx] - child.resolved().rect.height,
                     Placement::Center => {
-                        (node.col_axis_sizes[axis_idx] - child.resolved_mut().rect.height) / 2f32
+                        (node.col_axis_sizes[axis_idx] - child.resolved().rect.height) / 2f32
                     }
                 };
 

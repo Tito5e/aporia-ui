@@ -11,52 +11,38 @@ pub enum LayoutNode {
 
 impl LayoutNode {
     #[inline(always)]
-    pub fn clear_dirty(&self) {
-        match self {
-            LayoutNode::Box(node) => {
-                let self_resolved = unsafe { &mut *node.resolved };
-                self_resolved.is_width_changed = false;
-                self_resolved.is_height_changed = false;
-                self_resolved.is_x_changed = false;
-                self_resolved.is_y_changed = false;
-            }
-            LayoutNode::Ratio(node) => {
-                let self_resolved = unsafe { &mut *node.resolved };
-                self_resolved.is_width_changed = false;
-                self_resolved.is_height_changed = false;
-                self_resolved.is_x_changed = false;
-                self_resolved.is_y_changed = false;
-            }
-            LayoutNode::Flex(node) => {
-                let self_resolved = unsafe { &mut *node.resolved };
-                self_resolved.is_width_changed = false;
-                self_resolved.is_height_changed = false;
-                self_resolved.is_x_changed = false;
-                self_resolved.is_y_changed = false;
-            }
-            LayoutNode::Grid(node) => {
-                let self_resolved = unsafe { &mut *node.resolved };
-                self_resolved.is_width_changed = false;
-                self_resolved.is_height_changed = false;
-                self_resolved.is_x_changed = false;
-                self_resolved.is_y_changed = false;
-            }
-        }
+    pub fn clear_dirty(&mut self) {
+        let self_resolved = self.resolved_mut();
+        self_resolved.is_width_changed = false;
+        self_resolved.is_height_changed = false;
+        self_resolved.is_x_changed = false;
+        self_resolved.is_y_changed = false;
     }
 }
 
 pub(crate) trait LayoutNodeExt {
-    fn resolved_mut(&self) -> &mut ResolvedLayout;
+    fn resolved_mut(&mut self) -> &mut ResolvedLayout;
+    fn resolved(&self) -> &ResolvedLayout;
 }
 
 impl LayoutNodeExt for LayoutNode {
     #[inline(always)]
-    fn resolved_mut(&self) -> &mut ResolvedLayout {
+    fn resolved_mut(&mut self) -> &mut ResolvedLayout {
         match self {
-            LayoutNode::Box(node) => unsafe { &mut *node.resolved },
-            LayoutNode::Ratio(node) => unsafe { &mut *node.resolved },
-            LayoutNode::Flex(node) => unsafe { &mut *node.resolved },
-            LayoutNode::Grid(node) => unsafe { &mut *node.resolved },
+            LayoutNode::Box(node) => &mut node.resolved,
+            LayoutNode::Ratio(node) => &mut node.resolved,
+            LayoutNode::Flex(node) => &mut node.resolved,
+            LayoutNode::Grid(node) => &mut node.resolved,
+        }
+    }
+
+    #[inline(always)]
+    fn resolved(&self) -> &ResolvedLayout {
+        match self {
+            LayoutNode::Box(node) => &node.resolved,
+            LayoutNode::Ratio(node) => &node.resolved,
+            LayoutNode::Flex(node) => &node.resolved,
+            LayoutNode::Grid(node) => &node.resolved,
         }
     }
 }
@@ -77,7 +63,7 @@ pub struct BoxLayoutNode {
     pub parent: *mut LayoutNode,
     pub child: *mut LayoutNode,
 
-    pub resolved: *mut ResolvedLayout,
+    pub resolved: ResolvedLayout,
 }
 
 pub struct RatioLayoutNode {
@@ -93,7 +79,7 @@ pub struct RatioLayoutNode {
     pub parent: *mut LayoutNode,
     pub child: *mut LayoutNode,
 
-    pub resolved: *mut ResolvedLayout,
+    pub resolved: ResolvedLayout,
 }
 
 #[test]
@@ -123,7 +109,7 @@ pub struct FlexLayoutNode {
     pub parent: *mut LayoutNode,
     pub child_head: *mut FlexChildLink,
 
-    pub resolved: *mut ResolvedLayout,
+    pub resolved: ResolvedLayout,
     // This is cache !! DON'T USE !!
     pub cross_axis_gap_edge: f32,
     pub cross_axis_gap_between: f32,
@@ -150,7 +136,7 @@ pub struct GridLayoutNode {
     pub parent: *mut LayoutNode,
     pub child_head: *mut GridChildLink,
 
-    pub resolved: *mut ResolvedLayout,
+    pub resolved: ResolvedLayout,
     // This is cache !! DON'T UPDATE MANUALLY !!
     pub item_count: usize,
     pub row_axis_sizes: Vec<f32>,
@@ -165,7 +151,7 @@ pub struct ResolvedLayout {
     pub is_height_changed: bool,
 }
 
-const LAYOUT_THRESHOLD: f32 = 0.01;
+const LAYOUT_THRESHOLD: f32 = 0.1;
 
 impl ResolvedLayout {
     #[inline(always)]

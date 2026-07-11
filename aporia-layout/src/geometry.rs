@@ -22,17 +22,30 @@ impl Padding {
 pub struct Constraint {
     pub max_width: f32,
     pub max_height: f32,
+    pub fr_width: Option<f32>,
+    pub fr_height: Option<f32>,
 }
 
 impl Constraint {
     #[inline(always)]
     pub fn new(max_width: f32, max_height: f32) -> Self {
-        Self { max_width, max_height }
+        Self { max_width, max_height, fr_width: None, fr_height: None }
+    }
+
+    #[inline(always)]
+    pub fn new_fr(max_width: f32, max_height: f32, fr_width: f32, fr_height: f32) -> Self {
+        Self { max_width, max_height, fr_width: Some(fr_width), fr_height: Some(fr_height) }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Dimension {
+    Percent(f32),
+    Px(f32),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum GridDimension {
     Percent(f32),
     Px(f32),
     Fr(f32),
@@ -43,12 +56,23 @@ impl Dimension {
         match self {
             Dimension::Percent(percent) => constraint * percent,
             Dimension::Px(pixel) => *pixel,
+        }
+    }
+}
 
-            // Dimension::Frは相対単位なので制約ベースでは解決できない
-            // Dimension::Frに対応する各種レイアウトロジックにおいて特殊実装を持つことになる
-            // 対応していない場合ではPercentど同じ挙動を取るように設定されている
-            // TODO: Frに対して渡すConstraintのみFr(1)の単位長さにすることで統一的に扱える可能性がある
-            Dimension::Fr(fr) => constraint * fr,
+impl GridDimension {
+    pub fn resolve(&self, constraint: f32, fr_unit: Option<f32>) -> f32 {
+        match self {
+            GridDimension::Percent(percent) => constraint * percent,
+            GridDimension::Px(pixel) => *pixel,
+
+            GridDimension::Fr(fr) => {
+                if let Some(fr_unit) = fr_unit {
+                    fr_unit * fr
+                } else {
+                    constraint * fr
+                }
+            }
         }
     }
 }

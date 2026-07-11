@@ -1,4 +1,4 @@
-use crate::geometry::{Dimension, Padding};
+use crate::geometry::{Dimension, GridDimension, Padding};
 use crate::style::{Direction, FlexPlacement, Placement, RatioMode, WrapMode};
 use aporia_core::geometry::Rect;
 
@@ -116,8 +116,8 @@ pub struct FlexLayoutNode {
 }
 
 pub struct GridLayoutNode {
-    pub width: Option<Dimension>,
-    pub height: Option<Dimension>,
+    pub width: Option<GridDimension>,
+    pub height: Option<GridDimension>,
     pub min_width: Option<Dimension>,
     pub min_height: Option<Dimension>,
     pub max_width: Option<Dimension>,

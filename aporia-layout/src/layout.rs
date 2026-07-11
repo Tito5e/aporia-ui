@@ -51,10 +51,20 @@ fn compute_offset(node: &mut LayoutNode, offset: Size) {
 }
 
 fn compute_box_size(node: &mut BoxLayoutNode, constraint: Constraint) {
-    let outer_width_constraint =
-        resolve_constraint(node.width, node.min_width, node.max_width, constraint.max_width);
-    let outer_height_constraint =
-        resolve_constraint(node.height, node.min_height, node.max_height, constraint.max_height);
+    let outer_width_constraint = resolve_constraint(
+        node.width,
+        node.min_width,
+        node.max_width,
+        constraint.max_width,
+        constraint.fr_width,
+    );
+    let outer_height_constraint = resolve_constraint(
+        node.height,
+        node.min_height,
+        node.max_height,
+        constraint.max_height,
+        constraint.fr_height,
+    );
 
     if !node.child.is_null() {
         let inner_width_constraint =
@@ -85,10 +95,12 @@ fn compute_box_size(node: &mut BoxLayoutNode, constraint: Constraint) {
             };
 
             if let Some(max_width) = node.max_width {
-                self_width = max_width.resolve(constraint.max_width).min(self_width);
+                self_width =
+                    max_width.resolve(constraint.max_width, constraint.fr_width).min(self_width);
             }
             if let Some(min_width) = node.min_width {
-                self_width = min_width.resolve(constraint.max_width).max(self_width);
+                self_width =
+                    min_width.resolve(constraint.max_width, constraint.fr_width).max(self_width);
             }
 
             self_resolved.update_width(self_width);
@@ -109,10 +121,14 @@ fn compute_box_size(node: &mut BoxLayoutNode, constraint: Constraint) {
             };
 
             if let Some(max_height) = node.max_height {
-                self_height = max_height.resolve(constraint.max_height).min(self_height);
+                self_height = max_height
+                    .resolve(constraint.max_height, constraint.fr_height)
+                    .min(self_height);
             }
             if let Some(min_height) = node.min_height {
-                self_height = min_height.resolve(constraint.max_height).max(self_height);
+                self_height = min_height
+                    .resolve(constraint.max_height, constraint.fr_height)
+                    .max(self_height);
             }
 
             self_resolved.update_height(self_height);
@@ -185,10 +201,12 @@ fn compute_ratio_size(node: &mut RatioLayoutNode, constraint: Constraint) {
     let mut constraint_height = constraint.max_height;
 
     if let Some(max_width) = node.max_width {
-        constraint_width = constraint_width.min(max_width.resolve(constraint.max_width));
+        constraint_width =
+            constraint_width.min(max_width.resolve(constraint.max_width, constraint.fr_width));
     }
     if let Some(max_height) = node.max_height {
-        constraint_height = constraint_height.min(max_height.resolve(constraint.max_height));
+        constraint_height =
+            constraint_height.min(max_height.resolve(constraint.max_height, constraint.fr_height));
     }
 
     let (width, height) = match node.mode {
@@ -302,10 +320,20 @@ fn compute_ratio_offset(node: &mut RatioLayoutNode, offset: Size) {
 }
 
 fn compute_flex_size(node: &mut FlexLayoutNode, constraint: Constraint) {
-    let outer_width_constraint =
-        resolve_constraint(node.width, node.min_width, node.max_width, constraint.max_width);
-    let outer_height_constraint =
-        resolve_constraint(node.height, node.min_height, node.max_height, constraint.max_height);
+    let outer_width_constraint = resolve_constraint(
+        node.width,
+        node.min_width,
+        node.max_width,
+        constraint.max_width,
+        constraint.fr_width,
+    );
+    let outer_height_constraint = resolve_constraint(
+        node.height,
+        node.min_height,
+        node.max_height,
+        constraint.max_height,
+        constraint.fr_height,
+    );
 
     let inner_width_constraint = outer_width_constraint - node.padding.left - node.padding.right;
     let inner_height_constraint = outer_height_constraint - node.padding.top - node.padding.bottom;
@@ -510,10 +538,12 @@ fn compute_flex_size(node: &mut FlexLayoutNode, constraint: Constraint) {
             let mut self_width = occupied_width + node.padding.left + node.padding.right;
 
             if let Some(max_width) = node.max_width {
-                self_width = max_width.resolve(constraint.max_width).min(self_width);
+                self_width =
+                    max_width.resolve(constraint.max_width, constraint.fr_width).min(self_width);
             }
             if let Some(min_width) = node.min_width {
-                self_width = min_width.resolve(constraint.max_width).max(self_width);
+                self_width =
+                    min_width.resolve(constraint.max_width, constraint.fr_width).max(self_width);
             }
             self_width = constraint.max_width.min(self_width);
 
@@ -530,10 +560,14 @@ fn compute_flex_size(node: &mut FlexLayoutNode, constraint: Constraint) {
             let mut self_height = occupied_height + node.padding.top + node.padding.bottom;
 
             if let Some(max_height) = node.max_height {
-                self_height = max_height.resolve(constraint.max_height).min(self_height);
+                self_height = max_height
+                    .resolve(constraint.max_height, constraint.fr_height)
+                    .min(self_height);
             }
             if let Some(min_height) = node.min_height {
-                self_height = min_height.resolve(constraint.max_height).max(self_height);
+                self_height = min_height
+                    .resolve(constraint.max_height, constraint.fr_height)
+                    .max(self_height);
             }
             self_height = constraint.max_height.min(self_height);
 
@@ -773,10 +807,20 @@ fn compute_flex_offset(node: &mut FlexLayoutNode, offset: Size) {
 }
 
 fn compute_grid_size(node: &mut GridLayoutNode, constraint: Constraint) {
-    let outer_width_constraint =
-        resolve_constraint(node.width, node.min_width, node.max_width, constraint.max_width);
-    let outer_height_constraint =
-        resolve_constraint(node.height, node.min_height, node.max_height, constraint.max_height);
+    let outer_width_constraint = resolve_constraint(
+        node.width,
+        node.min_width,
+        node.max_width,
+        constraint.max_width,
+        constraint.fr_width,
+    );
+    let outer_height_constraint = resolve_constraint(
+        node.height,
+        node.min_height,
+        node.max_height,
+        constraint.max_height,
+        constraint.fr_height,
+    );
 
     let inner_width_constraint = outer_width_constraint - node.padding.left - node.padding.right;
     let inner_height_constraint = outer_height_constraint - node.padding.top - node.padding.bottom;
@@ -960,21 +1004,22 @@ fn resolve_constraint(
     min: Option<Dimension>,
     max: Option<Dimension>,
     constraint: f32,
+    fr_unit: Option<f32>,
 ) -> f32 {
     let mut result;
 
     if let Some(preferred) = preferred {
-        result = preferred.resolve(constraint);
+        result = preferred.resolve(constraint, fr_unit);
 
         if let Some(max) = max {
-            result = max.resolve(constraint).min(result);
+            result = max.resolve(constraint, fr_unit).min(result);
         }
         if let Some(min) = min {
-            result = min.resolve(constraint).max(result);
+            result = min.resolve(constraint, fr_unit).max(result);
         }
     } else {
         if let Some(max) = max {
-            result = max.resolve(constraint);
+            result = max.resolve(constraint, fr_unit);
         } else {
             result = constraint;
         }

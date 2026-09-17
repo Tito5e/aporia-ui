@@ -2,8 +2,8 @@ use std::{cell::RefCell, collections::HashSet, ffi::c_void, marker::PhantomData}
 
 use crate::reactivity::{
 	allocator::{GeneralStorage, SlabAllocator},
+	effect::{Effect, EffectState},
 	signal::{Signal, SignalState, SignalValue},
-	subscriber::{Subscriber, SubscriberState},
 };
 
 thread_local! {
@@ -18,13 +18,15 @@ pub(crate) struct Context {
 	/// for SignalValue
 	pub(crate) values: RefCell<GeneralStorage>,
 
-	/// for SubscriberState
-	pub(crate) subscribers: RefCell<SlabAllocator<32>>,
+	/// for EffectState
+	pub(crate) effects: RefCell<SlabAllocator<8>>,
 
-	/// dirty scopes
-	pub(crate) pending_subscribers: RefCell<HashSet<Subscriber>>,
+	/// dirty subscribers
+	pub(crate) pending_remount: RefCell<HashSet<Effect>>,
+	pub(crate) pending_logic: RefCell<HashSet<Effect>>,
+	pub(crate) pending_render: RefCell<HashSet<Effect>>,
 
-	pub(crate) current_mounter: Option<Subscriber>,
+	pub(crate) current_effect: Option<Effect>,
 }
 
 impl Context {
@@ -32,9 +34,11 @@ impl Context {
 		Self {
 			signals: RefCell::new(SlabAllocator::new()),
 			values: RefCell::new(GeneralStorage::new()),
-			subscribers: RefCell::new(SlabAllocator::new()),
-			pending_subscribers: RefCell::new(HashSet::new()),
-			current_mounter: None,
+			effects: RefCell::new(SlabAllocator::new()),
+			pending_remount: RefCell::new(HashSet::new()),
+			pending_logic: RefCell::new(HashSet::new()),
+			pending_render: RefCell::new(HashSet::new()),
+			current_effect: None,
 		}
 	}
 
@@ -49,17 +53,17 @@ impl Context {
 		Signal { state_ptr, phantom: PhantomData }
 	}
 
-	pub(crate) fn get_current_mounter() -> Option<Subscriber> {
-		CONTEXT.with(|context| context.current_mounter)
+	pub(crate) fn get_current_effect() -> Option<Effect> {
+		CONTEXT.with(|context| context.current_effect)
 	}
 }
 
 const _: () = {
 	// Slab Allocator Size
 	if size_of::<SignalState>() > 64 {
-		panic!("SignalData should be =<64");
+		panic!("SignalState should be =<64");
 	}
-	if size_of::<SubscriberState>() > 32 {
-		panic!("ScopeState should be =<32")
+	if size_of::<EffectState>() > 8 {
+		panic!("EffectState should be =<8");
 	}
 };

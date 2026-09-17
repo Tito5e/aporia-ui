@@ -1,10 +1,10 @@
-use crate::reactivity::{context::Context, subscriber::Subscriber};
+use crate::reactivity::{context::Context, effect::Effect};
 use std::{collections::HashSet, ffi::c_void, marker::PhantomData};
 
 /// Internal State for Signal
 pub(crate) struct SignalState {
 	pub(crate) value: SignalValue,
-	pub(crate) subscribers: HashSet<Subscriber>,
+	pub(crate) subscribers: HashSet<Effect>,
 }
 
 impl SignalState {
@@ -18,7 +18,7 @@ impl SignalState {
 		}
 	}
 
-	pub fn subscribe(&mut self, subscriber: Subscriber) {
+	pub fn subscribe(&mut self, subscriber: Effect) {
 		self.subscribers.insert(subscriber);
 	}
 }
@@ -68,7 +68,7 @@ impl<T> Signal<T> {
 		unsafe {
 			let state = &mut *self.state_ptr;
 
-			let current_mounter = Context::get_current_mounter();
+			let current_mounter = Context::get_current_effect();
 			if let Some(current_mounter) = current_mounter {
 				state.subscribe(current_mounter);
 			} else {

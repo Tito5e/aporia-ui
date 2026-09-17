@@ -1,6 +1,6 @@
 use winit::window::WindowAttributes;
 
-use crate::component::{Builder, Component, ComponentBuilder};
+use crate::component::Builder;
 
 pub struct Window<B: Builder> {
 	builder: B,
@@ -8,16 +8,8 @@ pub struct Window<B: Builder> {
 	title: String,
 }
 
-impl<C: Component> Window<ComponentBuilder<C>> {
-	pub fn from_component(component: C) -> Self {
-		let builder = ComponentBuilder::new(component);
-
-		Window { builder, title: Default::default() }
-	}
-}
-
 impl<B: Builder> Window<B> {
-	pub fn from_widget(widget: B) -> Self {
+	pub fn mount(widget: B) -> Self {
 		Window { builder: widget, title: Default::default() }
 	}
 

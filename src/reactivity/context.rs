@@ -39,8 +39,7 @@ impl Context {
 	}
 
 	pub(crate) fn create_signal<T>(initial_value: T) -> Signal<T> {
-		let value_ptr =
-			CONTEXT.with(|context| unsafe { context.values.borrow_mut().alloc(initial_value) });
+		let value_ptr = CONTEXT.with(|context| context.values.borrow_mut().alloc(initial_value));
 		let value = SignalValue::new(value_ptr as *mut c_void);
 		let state = SignalState { value, subscribers: HashSet::new() };
 		let raw_ptr = CONTEXT.with(|context| unsafe { context.signals.borrow_mut().alloc() });

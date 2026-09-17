@@ -1,10 +1,10 @@
-use crate::reactivity::{context::Context, subscriber::Scope};
+use crate::reactivity::{context::Context, subscriber::Subscriber};
 use std::{collections::HashSet, ffi::c_void, marker::PhantomData};
 
 /// Internal State for Signal
 pub(crate) struct SignalState {
 	pub(crate) value: SignalValue,
-	pub(crate) subscribers: HashSet<Scope>,
+	pub(crate) subscribers: HashSet<Subscriber>,
 }
 
 impl SignalState {
@@ -18,8 +18,8 @@ impl SignalState {
 		}
 	}
 
-	pub fn subscribe(&mut self, scope: Scope) {
-		self.subscribers.insert(scope);
+	pub fn subscribe(&mut self, subscriber: Subscriber) {
+		self.subscribers.insert(subscriber);
 	}
 }
 

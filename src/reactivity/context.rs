@@ -3,7 +3,7 @@ use std::{cell::RefCell, collections::HashSet, ffi::c_void, marker::PhantomData}
 use crate::reactivity::{
 	allocator::{GeneralStorage, SlabAllocator},
 	signal::{Signal, SignalState, SignalValue},
-	subscriber::{Scope, ScopeState},
+	subscriber::{Subscriber, SubscriberState},
 };
 
 thread_local! {
@@ -18,13 +18,13 @@ pub(crate) struct Context {
 	/// for SignalValue
 	pub(crate) values: RefCell<GeneralStorage>,
 
-	/// for ScopeState
-	pub(crate) scopes: RefCell<SlabAllocator<32>>,
+	/// for SubscriberState
+	pub(crate) subscribers: RefCell<SlabAllocator<32>>,
 
 	/// dirty scopes
-	pub(crate) pending_scopes: RefCell<HashSet<Scope>>,
+	pub(crate) pending_subscribers: RefCell<HashSet<Subscriber>>,
 
-	pub(crate) current_mounter: Option<Scope>,
+	pub(crate) current_mounter: Option<Subscriber>,
 }
 
 impl Context {
@@ -32,8 +32,8 @@ impl Context {
 		Self {
 			signals: RefCell::new(SlabAllocator::new()),
 			values: RefCell::new(GeneralStorage::new()),
-			scopes: RefCell::new(SlabAllocator::new()),
-			pending_scopes: RefCell::new(HashSet::new()),
+			subscribers: RefCell::new(SlabAllocator::new()),
+			pending_subscribers: RefCell::new(HashSet::new()),
 			current_mounter: None,
 		}
 	}
@@ -50,7 +50,7 @@ impl Context {
 		Signal { state_ptr, phantom: PhantomData }
 	}
 
-	pub(crate) fn get_current_mounter() -> Option<Scope> {
+	pub(crate) fn get_current_mounter() -> Option<Subscriber> {
 		CONTEXT.with(|context| context.current_mounter)
 	}
 }
@@ -60,7 +60,7 @@ const _: () = {
 	if size_of::<SignalState>() > 64 {
 		panic!("SignalData should be =<64");
 	}
-	if size_of::<ScopeState>() > 32 {
+	if size_of::<SubscriberState>() > 32 {
 		panic!("ScopeState should be =<32")
 	}
 };

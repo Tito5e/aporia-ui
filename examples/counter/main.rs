@@ -6,6 +6,6 @@ mod view;
 pub fn main() {
 	let application = StandaloneApplication::new();
 	let _result = application.run(|cx| {
-		cx.create_window(Window::from_component(MainView::new()).with_title("Counter"));
+		cx.create_window(Window::mount(MainView::new()).with_title("Counter"));
 	});
 }

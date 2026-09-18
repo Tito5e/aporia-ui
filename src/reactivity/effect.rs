@@ -1,16 +1,28 @@
 use std::ptr::NonNull;
 
-use crate::widget::Remountable;
-
-pub(crate) struct EffectState {
-	apply_stage: ApplyStage,
+pub(crate) enum EffectState {
+	Build(NonNull<dyn BuildPhase>),
+	Commit(NonNull<dyn CommitPhase>),
+	Render(NonNull<dyn RenderPhase>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct Effect(*mut EffectState);
 
-pub(crate) enum ApplyStage {
-	Remount,
-	Logic,
-	Render,
+impl Effect {
+	pub fn new(ptr: *mut EffectState) -> Self {
+		Self(ptr)
+	}
+}
+
+pub trait BuildPhase {
+	fn on_build(&mut self);
+}
+
+pub trait CommitPhase {
+	fn on_commit(&mut self);
+}
+
+pub trait RenderPhase {
+	fn on_render(&mut self);
 }

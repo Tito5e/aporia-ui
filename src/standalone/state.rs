@@ -1,8 +1,10 @@
 use winit::window::{Window, WindowId};
 
+use crate::component::WidgetHandle;
+
 pub(crate) struct WindowState {
 	pub(crate) window: Window,
-	//widget: Box<dyn Widget>,
+	pub(crate) widget: WidgetHandle,
 }
 
 impl WindowState {

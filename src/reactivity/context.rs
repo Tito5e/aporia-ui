@@ -1,9 +1,13 @@
-use std::{cell::RefCell, collections::HashSet, ffi::c_void, marker::PhantomData, ptr::NonNull};
+use std::{cell::RefCell, collections::HashSet, ffi::c_void, marker::PhantomData};
 
-use crate::reactivity::{
-	allocator::{GeneralStorage, SlabAllocator},
-	effect::{BuildPhase, Effect, EffectState},
-	signal::{Signal, SignalState, SignalValue},
+use crate::{
+	component::WidgetHandle,
+	reactivity::{
+		allocator::{GeneralStorage, SlabAllocator},
+		effect::{BuildEffect, BuildPhase, CommitEffect, EffectState, RenderEffect},
+		signal::{Signal, SignalState, SignalValue},
+	},
+	widget::Widget,
 };
 
 thread_local! {
@@ -21,15 +25,15 @@ pub(crate) struct Context {
 	/// for SignalValue
 	pub(crate) values: RefCell<GeneralStorage>,
 
-	/// for EffectState
-	pub(crate) effects: RefCell<SlabAllocator<EFFECT_SIZE>>,
+	/// for Components
+	pub(crate) widgets: RefCell<GeneralStorage>,
 
 	/// dirty subscribers
-	pub(crate) pending_build: RefCell<HashSet<Effect>>,
-	pub(crate) pending_commit: RefCell<HashSet<Effect>>,
-	pub(crate) pending_render: RefCell<HashSet<Effect>>,
+	pub(crate) pending_build: RefCell<HashSet<BuildEffect>>,
+	pub(crate) pending_commit: RefCell<HashSet<CommitEffect>>,
+	pub(crate) pending_render: RefCell<HashSet<RenderEffect>>,
 
-	pub(crate) current_effect: Option<Effect>,
+	pub(crate) current_effect: RefCell<Option<BuildEffect>>,
 }
 
 impl Context {
@@ -37,11 +41,11 @@ impl Context {
 		Self {
 			signals: RefCell::new(SlabAllocator::new()),
 			values: RefCell::new(GeneralStorage::new()),
-			effects: RefCell::new(SlabAllocator::new()),
+			widgets: RefCell::new(GeneralStorage::new()),
 			pending_build: RefCell::new(HashSet::new()),
 			pending_commit: RefCell::new(HashSet::new()),
 			pending_render: RefCell::new(HashSet::new()),
-			current_effect: None,
+			current_effect: RefCell::new(None),
 		}
 	}
 
@@ -56,17 +60,39 @@ impl Context {
 		Signal { state_ptr, phantom: PhantomData }
 	}
 
-	pub(crate) fn get_current_effect() -> Option<Effect> {
-		CONTEXT.with(|context| context.current_effect)
+	pub(crate) fn get_current_effect() -> Option<BuildEffect> {
+		CONTEXT.with(|context| *context.current_effect.borrow())
 	}
 
-	pub(crate) fn create_build_effect(effect_ptr: *mut dyn BuildPhase) -> Effect {
-		let state = EffectState::Build(unsafe { NonNull::new_unchecked(effect_ptr) });
-		let raw_ptr = CONTEXT.with(|context| unsafe { context.effects.borrow_mut().alloc() });
-		let state_ptr = raw_ptr as *mut EffectState;
-		unsafe { *state_ptr = state };
+	pub(crate) fn set_current_effect(effect: Option<BuildEffect>) {
+		CONTEXT.with(|context| context.current_effect.replace(effect));
+	}
 
-		Effect::new(state_ptr)
+	pub(crate) fn create_build_effect(effect_ptr: *mut dyn BuildPhase) -> BuildEffect {
+		BuildEffect::new(effect_ptr)
+	}
+
+	pub(crate) fn invalidate_build_effect(effect: BuildEffect) {
+		CONTEXT.with(|context| context.pending_build.borrow_mut().insert(effect));
+	}
+
+	pub(crate) fn invalidate_commit_effect(effect: CommitEffect) {
+		CONTEXT.with(|context| context.pending_commit.borrow_mut().insert(effect));
+	}
+
+	pub(crate) fn invalidate_render_effect(effect: RenderEffect) {
+		CONTEXT.with(|context| context.pending_render.borrow_mut().insert(effect));
+	}
+
+	pub(crate) fn allocate_widget<T: Widget + 'static>(widget: T) -> WidgetHandle {
+		let ptr = CONTEXT.with(|context| {
+			context.widgets.borrow_mut().alloc_with(widget, |p| p as *mut dyn Widget)
+		});
+		WidgetHandle(ptr)
+	}
+
+	pub(crate) fn free_widget(handle: &WidgetHandle) {
+		CONTEXT.with(|context| unsafe { context.widgets.borrow_mut().free(handle.0) });
 	}
 }
 

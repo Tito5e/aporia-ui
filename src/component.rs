@@ -58,7 +58,7 @@ impl<C: Component + 'static> Builder for C {
 		Context::set_current_effect(before_scope);
 		let child = child_builder.build();
 
-		let state = ComponentState { component: self, child };
+		let state = ComponentState { component: self, child, scope };
 		unsafe { ptr::write(raw_ptr as *mut ComponentState<C>, state) };
 		let handle = WidgetHandle(raw_ptr as *mut ComponentState<C>);
 
@@ -69,6 +69,7 @@ impl<C: Component + 'static> Builder for C {
 pub(crate) struct ComponentState<C: Component> {
 	component: C,
 	child: WidgetHandle,
+	scope: BuildEffect,
 }
 
 impl<C: Component> Widget for ComponentState<C> {
@@ -82,6 +83,11 @@ impl<C: Component> Widget for ComponentState<C> {
 
 impl<C: Component> BuildPhase for ComponentState<C> {
 	fn on_build_phase(&mut self) {
-		todo!()
+		let before_scope = Context::get_current_effect();
+		Context::set_current_effect(Some(self.scope));
+		let child_builder = self.component.view();
+		Context::set_current_effect(before_scope);
+		let child = child_builder.build();
+		self.child = child;
 	}
 }

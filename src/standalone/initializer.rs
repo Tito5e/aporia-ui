@@ -17,8 +17,7 @@ impl<'a> Initializer<'a> {
 		let id = window.id();
 
 		// TODO: ここにコンポーネントを実体化する処理を入れる
-		// let state = WindowState { window, widget: builder.build() };
-		let state = WindowState { window };
+		let state = WindowState { window, widget: builder.build() };
 		self.states.push(state);
 		Some(id)
 	}

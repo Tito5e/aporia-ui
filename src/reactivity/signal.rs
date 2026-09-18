@@ -68,9 +68,9 @@ impl<T> Signal<T> {
 		unsafe {
 			let state = &mut *self.state_ptr;
 
-			let current_mounter = Context::get_current_effect();
-			if let Some(current_mounter) = current_mounter {
-				state.subscribe(current_mounter);
+			let current_scope = Context::get_current_effect();
+			if let Some(current_scope) = current_scope {
+				state.subscribe(Effect::Build(current_scope));
 			} else {
 				panic!("Dont read signal value outside Component")
 			}
@@ -82,6 +82,15 @@ impl<T> Signal<T> {
 		unsafe {
 			let state = &mut *self.state_ptr;
 			state.write(value);
+
+			state.subscribers.iter().for_each(|effect| effect.invalidate());
+		}
+	}
+
+	pub(crate) fn subscribe(&self, subscriber: Effect) {
+		unsafe {
+			let state = &mut *self.state_ptr;
+			state.subscribe(subscriber);
 		}
 	}
 }

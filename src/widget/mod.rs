@@ -20,7 +20,3 @@ pub(crate) trait IntrinsicHeight {
 pub trait Widget {
 	fn layout(&mut self, constraint: Constraint) -> Size;
 }
-
-pub trait Remountable {
-	fn remount(&mut self);
-}

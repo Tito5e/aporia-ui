@@ -9,7 +9,7 @@ pub(crate) enum EffectState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct BuildEffect(NonNull<dyn BuildPhase>);
+pub struct BuildEffect(pub(crate) NonNull<dyn BuildPhase>);
 
 impl BuildEffect {
 	pub fn new_validated(ptr: *mut dyn BuildPhase) -> Self {

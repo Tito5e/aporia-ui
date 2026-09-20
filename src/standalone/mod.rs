@@ -1,5 +1,7 @@
 use std::error::Error;
 
+use pollster::FutureExt;
+use wgpu::{DeviceDescriptor, Instance, InstanceDescriptor, RequestAdapterOptions};
 use winit::event_loop::EventLoop;
 
 use crate::standalone::{initializer::Initializer, runner::AppRunner};
@@ -20,9 +22,27 @@ impl StandaloneApplication {
 		F: FnMut(&mut Initializer),
 	{
 		let event_loop = EventLoop::new()?;
-		let mut app = AppRunner { initializer, states: Vec::new(), initialized: false };
+		let mut app = StandaloneApplication::initialize(initializer);
 
 		event_loop.run_app(&mut app)?;
 		Ok(())
+	}
+
+	fn initialize<F: FnMut(&mut Initializer)>(initializer: F) -> AppRunner<F> {
+		let instance = Instance::new(InstanceDescriptor::new_without_display_handle());
+		let adapter_options = RequestAdapterOptions::default();
+		let adapter = instance.request_adapter(&adapter_options).block_on().unwrap();
+		let device_desc = DeviceDescriptor::default();
+		let (device, queue) = adapter.request_device(&device_desc).block_on().unwrap();
+
+		AppRunner {
+			initializer,
+			states: Vec::new(),
+			initialized: false,
+			gpu_instance: instance,
+			gpu_device: device,
+			gpu_queue: queue,
+			gpu_adapter: adapter,
+		}
 	}
 }

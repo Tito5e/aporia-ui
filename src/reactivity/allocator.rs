@@ -272,6 +272,29 @@ impl Default for GeneralStorage {
 }
 
 impl GeneralStorage {
+	pub fn alloc_uninit<T: ?Sized, C, F>(&mut self, coerce: F) -> *mut T
+	where
+		C: Sized,
+		F: FnOnce(*mut C) -> *mut T,
+	{
+		let size = size_of::<C>();
+		let align = align_of::<C>();
+
+		if size == 0 {
+			// SAFETY: ZST の場合コンパイラはalign以上のダングリングポインターを許容するものとする
+			let dangling = ptr::NonNull::<C>::dangling().as_ptr();
+			return coerce(dangling);
+		}
+
+		unsafe {
+			// スロットの確保を行う
+			let raw: *mut u8 = self.alloc_raw(size, align);
+			let dst: *mut C = raw.cast::<C>();
+
+			// fat pointerを返す
+			coerce(dst)
+		}
+	}
 	/// コンクリート型 `C` の値をアロケーターメモリに直接配置し、その可変生ポインター `*mut T` を返す
 	///
 	/// # 型パラメーター
@@ -390,7 +413,7 @@ impl GeneralStorage {
 	}
 
 	/// `ptr` を適切な Slab または Heap に返却する
-	unsafe fn free_raw(&mut self, ptr: *mut u8, size: usize, align: usize) {
+	pub unsafe fn free_raw(&mut self, ptr: *mut u8, size: usize, align: usize) {
 		unsafe {
 			match slab_class(size, align) {
 				Some(8) => self.slab8.free(ptr),

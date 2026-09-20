@@ -2,7 +2,6 @@ use std::ptr;
 
 use crate::{
 	reactivity::{
-		allocator::HeapAllocator,
 		context::Context,
 		effect::{BuildEffect, BuildPhase},
 	},
@@ -47,11 +46,9 @@ pub trait Component {
 impl<C: Component + 'static> Builder for C {
 	fn build(self) -> WidgetHandle {
 		// TODO: コンポーネントの配置をBoxを用いた危険な実装からヒープアロケーターを用いたものに変更する
-		let raw_ptr = unsafe {
-			HeapAllocator::alloc(size_of::<ComponentState<C>>(), align_of::<ComponentState<C>>())
-		};
+		let handle = Context::allocate_widget_uninit::<ComponentState<C>>();
 		let scope =
-			BuildEffect::new_validated(raw_ptr as *mut ComponentState<C> as *mut dyn BuildPhase);
+			BuildEffect::new_validated(handle.0 as *mut ComponentState<C> as *mut dyn BuildPhase);
 		let before_scope = Context::get_current_effect();
 		Context::set_current_effect(Some(scope));
 		let child_builder = self.view();
@@ -59,8 +56,7 @@ impl<C: Component + 'static> Builder for C {
 		let child = child_builder.build();
 
 		let state = ComponentState { component: self, child, scope };
-		unsafe { ptr::write(raw_ptr as *mut ComponentState<C>, state) };
-		let handle = WidgetHandle(raw_ptr as *mut ComponentState<C>);
+		unsafe { ptr::write(handle.0 as *mut ComponentState<C>, state) };
 
 		handle
 	}

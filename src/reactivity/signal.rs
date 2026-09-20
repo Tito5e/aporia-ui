@@ -1,5 +1,12 @@
-use crate::reactivity::{context::Context, effect::Effect};
-use std::{collections::HashSet, ffi::c_void, marker::PhantomData};
+use slotmap::new_key_type;
+
+use crate::reactivity::{
+	context::{CONTEXT, Context},
+	effect::Effect,
+};
+use std::{collections::HashSet, ffi::c_void, marker::PhantomData, mem::transmute};
+
+new_key_type! { pub(crate) struct SignalKey; }
 
 /// Internal State for Signal
 pub(crate) struct SignalState {
@@ -46,7 +53,7 @@ impl SignalValue {
 }
 
 pub struct Signal<T> {
-	pub(crate) state_ptr: *mut SignalState,
+	pub(crate) state_key: SignalKey,
 	pub(crate) phantom: PhantomData<T>,
 }
 
@@ -59,14 +66,21 @@ impl<T> Signal<T> {
 
 	pub(crate) fn get_untracked(&self) -> &T {
 		unsafe {
-			let state = &*self.state_ptr;
+			let state: &mut SignalState = CONTEXT.with(|context| {
+				transmute(context.signals.borrow_mut().get_unchecked_mut(self.state_key)
+					as &mut SignalState)
+			});
+
 			state.read()
 		}
 	}
 
 	pub fn get(&self) -> &T {
 		unsafe {
-			let state = &mut *self.state_ptr;
+			let state: &mut SignalState = CONTEXT.with(|context| {
+				transmute(context.signals.borrow_mut().get_unchecked_mut(self.state_key)
+					as &mut SignalState)
+			});
 
 			let current_scope = Context::get_current_effect();
 			if let Some(current_scope) = current_scope {
@@ -80,7 +94,10 @@ impl<T> Signal<T> {
 
 	pub fn set(&self, value: T) {
 		unsafe {
-			let state = &mut *self.state_ptr;
+			let state: &mut SignalState = CONTEXT.with(|context| {
+				transmute(context.signals.borrow_mut().get_unchecked_mut(self.state_key)
+					as &mut SignalState)
+			});
 			state.write(value);
 
 			state.subscribers.iter().for_each(|effect| effect.invalidate());
@@ -89,7 +106,10 @@ impl<T> Signal<T> {
 
 	pub(crate) fn subscribe(&self, subscriber: Effect) {
 		unsafe {
-			let state = &mut *self.state_ptr;
+			let state: &mut SignalState = CONTEXT.with(|context| {
+				transmute(context.signals.borrow_mut().get_unchecked_mut(self.state_key)
+					as &mut SignalState)
+			});
 			state.subscribe(subscriber);
 		}
 	}

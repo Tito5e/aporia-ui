@@ -13,12 +13,12 @@ pub struct Initializer<'a> {
 	pub(crate) gpu_queue: &'a mut Queue,
 
 	pub(crate) event_loop: &'a ActiveEventLoop,
-	pub(crate) states: &'a mut Vec<WindowState<'a>>,
+	pub(crate) states: &'a mut Vec<WindowState>,
 }
 
 impl<'a> Initializer<'a> {
 	pub fn create_window<B: Builder>(
-		&'a mut self,
+		&mut self,
 		window: crate::window::Window<B>,
 	) -> Option<WindowId> {
 		let (attributes, builder) = window.into_internal_data();
@@ -53,12 +53,13 @@ impl<'a> Initializer<'a> {
 		let state = WindowState {
 			window,
 			widget: widget_handle,
+			size,
 			surface,
 			surface_format,
 			surface_config,
-			gpu_device: self.gpu_device,
-			gpu_instance: self.gpu_instance,
-			gpu_queue: self.gpu_queue,
+			gpu_device: self.gpu_device.clone(),
+			gpu_instance: self.gpu_instance.clone(),
+			gpu_queue: self.gpu_queue.clone(),
 		};
 		self.states.push(state);
 		Some(id)

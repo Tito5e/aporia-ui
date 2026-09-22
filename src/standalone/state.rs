@@ -1,23 +1,27 @@
 use wgpu::{
 	Device, Instance, Queue, Surface, SurfaceConfiguration, SurfaceTargetUnsafe, TextureFormat,
 };
-use winit::window::{Window, WindowId};
+use winit::{
+	dpi::PhysicalSize,
+	window::{Window, WindowId},
+};
 
 use crate::component::WidgetHandle;
 
-pub(crate) struct WindowState<'a> {
+pub(crate) struct WindowState {
 	pub(crate) surface: Surface<'static>,
 	pub(crate) surface_format: TextureFormat,
 	pub(crate) surface_config: SurfaceConfiguration,
-	pub(crate) gpu_device: &'a Device,
-	pub(crate) gpu_instance: &'a Instance,
-	pub(crate) gpu_queue: &'a Queue,
+	pub(crate) gpu_device: Device,
+	pub(crate) gpu_instance: Instance,
+	pub(crate) gpu_queue: Queue,
+	pub(crate) size: PhysicalSize<u32>,
 
 	pub(crate) window: Window,
 	pub(crate) widget: WidgetHandle,
 }
 
-impl<'a> WindowState<'a> {
+impl WindowState {
 	pub(crate) fn window_id(&self) -> WindowId {
 		self.window.id()
 	}
@@ -26,8 +30,7 @@ impl<'a> WindowState<'a> {
 		self.window.request_redraw();
 	}
 
-	fn configure_surface(&self) {
-		let size = self.window.inner_size();
+	pub(crate) fn configure_surface(&self) {
 		let surface_config = wgpu::SurfaceConfiguration {
 			usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
 			format: self.surface_format,
@@ -35,8 +38,8 @@ impl<'a> WindowState<'a> {
 			// Request compatibility with the sRGB-format texture view we‘re going to create later.
 			view_formats: vec![self.surface_format.add_srgb_suffix()],
 			alpha_mode: wgpu::CompositeAlphaMode::Auto,
-			width: size.width,
-			height: size.height,
+			width: self.size.width,
+			height: self.size.height,
 			desired_maximum_frame_latency: 2,
 			present_mode: wgpu::PresentMode::AutoVsync,
 		};
@@ -88,7 +91,7 @@ impl<'a> WindowState<'a> {
 				depth_slice: None,
 				resolve_target: None,
 				ops: wgpu::Operations {
-					load: wgpu::LoadOp::Clear(wgpu::Color::GREEN),
+					load: wgpu::LoadOp::Clear(wgpu::Color::RED),
 					store: wgpu::StoreOp::Store,
 				},
 			})],

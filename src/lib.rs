@@ -1,6 +1,7 @@
 pub mod application;
 pub mod component;
 pub mod core;
+pub mod object;
 pub mod reactivity;
 pub mod renderer;
 pub mod standalone;

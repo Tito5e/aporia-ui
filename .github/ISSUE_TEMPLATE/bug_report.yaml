@@ -1,0 +1,53 @@
+name: Bug Report - バグ報告
+description: Report a bug or unexpected behavior. - バグや予期しない動作を報告する
+labels: ["plan:bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please make sure to [search for existing issues](https://github.com/Tito5e/aporia-ui/issues) before filing a new one.
+        新しいIssueを作成する前に、同じ内容を報告するIssueが存在しないことを確認してください [Issues](https://github.com/Tito5e/aporia-ui/issues)
+  - id: version
+    type: input
+    attributes:
+      label: aporia-ui version
+      placeholder: 0.0.0
+      description: |
+        Version of aporia-ui where the bug occurred.
+        バグが発生したaporia-uiのバージョン
+  - id: backend
+    type: dropdown
+    attributes:
+      label: Backend
+      description: |
+        Backend used when encountering the bug. (If unsure, select other)
+        バグに遭遇した際に使用していたaporia-uiのバックエンド (よくわからない場合はotherを選択してください)
+      multiple: false
+      options:
+        - standard
+        - lightweight
+        - web
+        - other
+  - id: description
+    type: textarea
+    attributes:
+      label: Description
+      description: |
+        Describe the bug and, if possible, provide a code snippet that reproduces it.
+        バグの内容を記述し、可能であれば再現を行うためのコードを共有してください
+      placeholder: |
+        bug description / code snippet
+    validations:
+      required: true
+  - id: additional
+    type: textarea
+    attributes:
+      label: Additional Information
+      placeholder: |
+        For ex: your PC specifications, OS version, or other relevant info.
+        例: PCのスペック、OSのバージョン、その他関連する情報など
+      description: |
+        Add any information you think may be useful for investigating the issue.
+        Issueの調査に必要だと思う情報があれば記述してください
+    validations:
+      required: false

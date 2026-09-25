@@ -1,0 +1,33 @@
+name: Feature Request - 機能要望
+description: Request a new feature or improvement. - 新しい機能や改善を要望する
+labels: ["plan:feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please make sure to [search for existing issues](https://github.com/Tito5e/aporia-ui/issues) before filing a new one.
+        新しいIssueを作成する前に、同じ内容を要望するIssueが存在しないことを確認してください [Issues](https://github.com/Tito5e/aporia-ui/issues)
+  - id: description
+    type: textarea
+    attributes:
+      label: Description
+      description: |
+        Describe the feature or improvement you would like and why it would be useful.
+        追加してほしい機能や改善の内容と、なぜそれが必要なのか、何に役立つのかを記述してください
+      placeholder: |
+        feature description / use case
+        機能の説明 / 使用例
+    validations:
+      required: true
+  - id: additional
+    type: textarea
+    attributes:
+      label: Additional Information
+      placeholder: |
+        For ex: related projects, possible implementations, or other relevant info.
+        例: 関連するプロジェクト、実装方法のアイデア、その他関連する情報など
+      description: |
+        Add any information you think may be useful for considering the request.
+        要望を検討するために必要だと思う情報があれば記述してください
+    validations:
+      required: false

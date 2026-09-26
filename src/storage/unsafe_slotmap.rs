@@ -121,8 +121,10 @@ impl UnsafeSlotMap {
 		let slot = unsafe { self.slots.get_mut_for::<Slot<T>>(reservation.0) };
 
 		match slot {
-			Slot::Empty(_) => unreachable!(),
-			Slot::Occupied(_) => unreachable!(),
+			Slot::Empty(_) => panic!("The slot referenced by the ReserveKey is Slot::Empty."),
+			Slot::Occupied(_) => {
+				panic!("The slot referenced by the ReserveKey is Slot::Occupied.")
+			}
 			Slot::Reserved => *slot = Slot::Occupied(value),
 		}
 
@@ -142,8 +144,8 @@ impl UnsafeSlotMap {
 				self.free_head = reservation.0;
 				self.num_elems -= 1;
 			}
-			Slot::Empty(_) => unreachable!(),
-			Slot::Occupied(_) => unreachable!(),
+			Slot::Empty(_) => panic!("The slot referenced by the ReserveKey is Slot::Empty."),
+			Slot::Occupied(_) => panic!("The slot referenced by the ReserveKey is Slot::Occupied."),
 		}
 	}
 
@@ -156,8 +158,10 @@ impl UnsafeSlotMap {
 		let slot = unsafe { self.slots.get_for::<Slot<T>>(idx.0) };
 
 		match slot {
-			Slot::Empty(_) => unreachable!(),
-			Slot::Reserved => unreachable!("tempo"),
+			Slot::Empty(_) => panic!("The slot referenced by the Key is Slot::Empty."),
+			Slot::Reserved => {
+				panic!("The slot referenced by the Key is Slot::Reserved.")
+			}
 			Slot::Occupied(value) => value,
 		}
 	}
@@ -176,9 +180,9 @@ impl UnsafeSlotMap {
 		self.num_elems -= 1;
 
 		match slot_data {
-			Slot::Empty(_) => unreachable!(),
+			Slot::Empty(_) => panic!("The slot referenced by the Key is Slot::Empty."),
 			Slot::Occupied(value) => value,
-			Slot::Reserved => unreachable!(),
+			Slot::Reserved => panic!("The slot referenced by the Key is Slot::Reserved."),
 		}
 	}
 }

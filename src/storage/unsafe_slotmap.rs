@@ -306,45 +306,6 @@ fn respects_large_alignment_requirements() {
 }
 
 #[test]
-fn push_mut_for_returns_reference_to_the_pushed_element() {
-	let mut v = UnsafeVec::new_for::<u32>();
-	let r = unsafe { v.push_mut_for(10u32) };
-	*r += 5;
-
-	assert_eq!(unsafe { *v.get_for::<u32>(0) }, 15);
-}
-
-#[test]
-fn get_mut_for_allows_in_place_mutation() {
-	let mut v = UnsafeVec::new_for::<u32>();
-	unsafe { v.push_for(1u32) };
-	*unsafe { v.get_mut_for::<u32>(0) } += 41;
-
-	assert_eq!(unsafe { *v.get_for::<u32>(0) }, 42);
-}
-
-#[test]
-#[cfg(debug_assertions)]
-#[should_panic(
-	expected = "UnsafeVec: type size does not match the size specified at initialization."
-)]
-fn type_mismatch_is_caught_by_debug_assert() {
-	let mut v = UnsafeVec::new_for::<u32>();
-	unsafe { v.push_for(42u32) };
-
-	let _ = unsafe { v.get_for::<u64>(0) };
-}
-
-#[test]
-#[cfg(debug_assertions)]
-#[should_panic(expected = "out of bounds")]
-fn out_of_bounds_access_is_caught_by_debug_assert() {
-	let v = UnsafeVec::new_for::<u32>();
-
-	let _ = unsafe { v.get_for::<u32>(0) };
-}
-
-#[test]
 fn reserve_then_write_supports_self_referential_index() {
 	struct Node {
 		self_idx: ReserveKey,

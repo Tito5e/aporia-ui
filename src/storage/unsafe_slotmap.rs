@@ -58,6 +58,8 @@ impl UnsafeSlotMap {
 		self.num_elems == 0
 	}
 
+	/// # Safety
+	/// `T`はこのインスタンスの構築時に使われた型と一致していなければならない
 	#[inline]
 	#[must_use]
 	pub unsafe fn insert<T>(&mut self, value: T) -> Key {
@@ -83,6 +85,8 @@ impl UnsafeSlotMap {
 		Key(slot_idx)
 	}
 
+	/// # Safety
+	/// `T`はこのインスタンスの構築時に使われた型と一致していなければならない
 	#[inline]
 	#[must_use]
 	pub unsafe fn reserve<T>(&mut self) -> ReserveKey {
@@ -108,6 +112,9 @@ impl UnsafeSlotMap {
 		ReserveKey(slot_idx)
 	}
 
+	/// # Safety
+	/// `reservation`はこのインスタンスから確保されたReserveKeyでなければならない
+	/// `T`はこのインスタンスの構築時に使われた型と一致していなければならない
 	#[inline]
 	#[must_use]
 	pub unsafe fn write<T>(&mut self, reservation: ReserveKey, value: T) -> Key {
@@ -122,6 +129,9 @@ impl UnsafeSlotMap {
 		Key(reservation.0)
 	}
 
+	/// # Safety
+	/// `reservation`はこのインスタンスから確保されたReserveKeyでなければならない
+	/// `T`はこのインスタンスの構築時に使われた型と一致していなければならない
 	#[inline]
 	pub unsafe fn cancel<T>(&mut self, reservation: ReserveKey) {
 		let slot = unsafe { self.slots.get_mut_for::<Slot<T>>(reservation.0) };
@@ -138,7 +148,7 @@ impl UnsafeSlotMap {
 	}
 
 	/// # Safety
-	/// `idx`は現在occupiedなスロットのインデックスである必要がある
+	/// `idx`はこのインスタンスから確保されたKeyでなければならない
 	/// `T`はこのインスタンスの構築時に使われた型と一致していなければならない
 	#[inline]
 	#[must_use]
@@ -153,10 +163,10 @@ impl UnsafeSlotMap {
 	}
 
 	/// # Safety
-	/// `idx`は現在occupiedなスロットのインデックスである必要がある
+	/// `idx`はこのインスタンスから確保されたKeyでなければならない
 	/// `T`はこのインスタンスの構築時に使われた型と一致していなければならない
 	///
-	/// `T`がデストラクタを保つ場合、戻り値の`T`の破棄は呼び出し側の責任となる
+	/// `T`がデストラクタを持つ場合、戻り値の`T`の破棄は呼び出し側の責任となる
 	#[inline]
 	#[must_use]
 	pub unsafe fn remove<T>(&mut self, idx: Key) -> T {

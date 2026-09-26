@@ -5,5 +5,6 @@ pub mod object;
 pub mod reactivity;
 pub mod renderer;
 pub mod standalone;
+pub mod storage;
 pub mod widget;
 pub mod window;

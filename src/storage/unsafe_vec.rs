@@ -119,7 +119,11 @@ impl UnsafeVec {
 	#[must_use]
 	pub unsafe fn get_ptr_for<T>(&self, index: usize) -> *const T {
 		self.debug_assert_type::<T>();
-		debug_assert!(index < self.len, "UnsafeVec: index({index})が範囲外です(len={})", self.len);
+		debug_assert!(
+			index < self.len,
+			"UnsafeVec: index {index} out of bounds (len={}).",
+			self.len
+		);
 
 		unsafe { self.as_ptr_for::<T>().add(index) }
 	}
@@ -131,7 +135,11 @@ impl UnsafeVec {
 	#[must_use]
 	pub unsafe fn get_mut_ptr_for<T>(&mut self, index: usize) -> *mut T {
 		self.debug_assert_type::<T>();
-		debug_assert!(index < self.len, "UnsafeVec: index({index})が範囲外です(len={})", self.len);
+		debug_assert!(
+			index < self.len,
+			"UnsafeVec: index {index} out of bounds (len={}).",
+			self.len
+		);
 
 		unsafe { self.as_mut_ptr_for::<T>().add(index) }
 	}
@@ -178,12 +186,12 @@ impl UnsafeVec {
 		debug_assert_eq!(
 			self.size,
 			size_of::<T>(),
-			"UnsafeVec: 呼び出しに使われた型のサイズが構築時と一致しません"
+			"UnsafeVec: type size does not match the size specified at initialization."
 		);
 		debug_assert_eq!(
 			self.align,
 			align_of::<T>(),
-			"UnsafeVec: 呼び出しに使われた型のアラインメントが構築時と一致しません"
+			"UnsafeVec: type alignment does not match the alignment specified at initialization."
 		);
 	}
 

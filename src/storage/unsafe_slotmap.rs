@@ -280,7 +280,7 @@ fn regrowth_preserves_previously_inserted_values() {
 		assert_eq!(
 			*unsafe { m.get::<u64>(Key(i as usize)) },
 			i,
-			"grow(realloc)後にindex{i}の値が破壊されている"
+			"value at index {i} was corrupted after grow."
 		);
 	}
 }
@@ -301,7 +301,7 @@ fn respects_large_alignment_requirements() {
 		assert_eq!(got.value, i as u64);
 
 		let addr = got as *const Aligned64 as usize;
-		assert_eq!(addr % 64, 0, "index{}の要素がアラインメント64に沿っていない", idx.0);
+		assert_eq!(addr % 64, 0, "element at index {} is not 64-byte aligned.", idx.0);
 	}
 }
 
@@ -325,7 +325,9 @@ fn get_mut_for_allows_in_place_mutation() {
 
 #[test]
 #[cfg(debug_assertions)]
-#[should_panic(expected = "型のサイズが構築時と一致しません")]
+#[should_panic(
+	expected = "UnsafeVec: type size does not match the size specified at initialization."
+)]
 fn type_mismatch_is_caught_by_debug_assert() {
 	let mut v = UnsafeVec::new_for::<u32>();
 	unsafe { v.push_for(42u32) };
@@ -335,7 +337,7 @@ fn type_mismatch_is_caught_by_debug_assert() {
 
 #[test]
 #[cfg(debug_assertions)]
-#[should_panic(expected = "範囲外")]
+#[should_panic(expected = "out of bounds")]
 fn out_of_bounds_access_is_caught_by_debug_assert() {
 	let v = UnsafeVec::new_for::<u32>();
 
@@ -387,7 +389,7 @@ fn reserve_for_and_insert_for_share_the_free_list_correctly() {
 	let removed_a = unsafe { m.remove::<u32>(idx_a) };
 	assert_eq!(removed_a, 1);
 	let idx_d = unsafe { m.reserve::<u32>() };
-	assert_eq!(idx_d.0, idx_a.0, "removeで空いたスロットがLIFOで再利用される");
+	assert_eq!(idx_d.0, idx_a.0);
 
 	assert_eq!(*unsafe { m.get::<u32>(idx_c) }, 3);
 

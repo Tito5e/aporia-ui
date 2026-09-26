@@ -21,13 +21,13 @@ impl<T> Slot<T> {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Key(usize);
+pub(crate) struct Key(usize);
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct ReserveKey(usize);
+pub(crate) struct ReserveKey(usize);
 
 #[derive(Debug)]
-pub struct UnsafeSlotMap {
+pub(crate) struct UnsafeSlotMap {
 	slots: UnsafeVec,
 	free_head: usize,
 	num_elems: usize,

@@ -188,7 +188,7 @@ impl UnsafeSlotMap {
 }
 
 #[test]
-pub fn unsafe_slot_map() {
+fn unsafe_slot_map() {
 	let mut slot_map = UnsafeSlotMap::new::<u32>();
 	let idx1 = unsafe { slot_map.insert::<u32>(5) };
 	let idx2 = unsafe { slot_map.insert::<u32>(8) };

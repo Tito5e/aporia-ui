@@ -5,12 +5,18 @@ use crate::storage::unsafe_vec::UnsafeVec;
 enum Slot<T> {
 	Occupied(T),
 	Empty(usize),
+	Reserved,
 }
 
 impl<T> Slot<T> {
 	#[inline]
 	const fn occupied(&self) -> bool {
 		matches!(self, Slot::Occupied(_))
+	}
+
+	#[inline]
+	const fn reserved(&self) -> bool {
+		matches!(self, Slot::Reserved)
 	}
 }
 
@@ -55,6 +61,7 @@ impl UnsafeSlotMap {
 			let next_free = match slot {
 				Slot::Empty(next_free) => *next_free,
 				Slot::Occupied(_) => unreachable!(),
+				Slot::Reserved => unreachable!(),
 			};
 			*slot = Slot::Occupied(value);
 			self.free_head = next_free;
@@ -67,6 +74,56 @@ impl UnsafeSlotMap {
 		slot_idx
 	}
 
+	#[inline]
+	#[must_use]
+	pub unsafe fn reserve_for<T>(&mut self) -> usize {
+		let slot_idx = self.free_head;
+		let inner_len = self.slots.len();
+
+		if self.num_elems < inner_len {
+			let slot = unsafe { self.slots.get_mut_for::<Slot<T>>(slot_idx) };
+			let next_free = match slot {
+				Slot::Empty(next_free) => *next_free,
+				Slot::Occupied(_) => unreachable!(),
+				Slot::Reserved => unreachable!(),
+			};
+			*slot = Slot::Reserved;
+			self.free_head = next_free;
+		} else {
+			unsafe { self.slots.push_for::<Slot<T>>(Slot::Reserved) };
+			self.free_head = self.num_elems + 1;
+		}
+
+		self.num_elems += 1;
+		slot_idx
+	}
+
+	#[inline]
+	pub unsafe fn write_reserved_for<T>(&mut self, idx: usize, value: T) {
+		let slot = unsafe { self.slots.get_mut_for::<Slot<T>>(idx) };
+
+		match slot {
+			Slot::Empty(_) => unreachable!(),
+			Slot::Occupied(_) => unreachable!(),
+			Slot::Reserved => *slot = Slot::Occupied(value),
+		}
+	}
+
+	#[inline]
+	pub unsafe fn cancel_reservation_for<T>(&mut self, idx: usize) {
+		let slot = unsafe { self.slots.get_mut_for::<Slot<T>>(idx) };
+
+		match slot {
+			Slot::Reserved => {
+				*slot = Slot::Empty(self.free_head);
+				self.free_head = idx;
+				self.num_elems -= 1;
+			}
+			Slot::Empty(_) => unreachable!(),
+			Slot::Occupied(_) => unreachable!(),
+		}
+	}
+
 	/// # Safety
 	/// `idx`は現在occupiedなスロットのインデックスである必要がある
 	/// `T`はこのインスタンスの構築時に使われた型と一致していなければならない
@@ -77,6 +134,7 @@ impl UnsafeSlotMap {
 
 		match slot {
 			Slot::Empty(_) => unreachable!(),
+			Slot::Reserved => unreachable!("tempo"),
 			Slot::Occupied(value) => value,
 		}
 	}
@@ -97,7 +155,24 @@ impl UnsafeSlotMap {
 		match slot_data {
 			Slot::Empty(_) => unreachable!(),
 			Slot::Occupied(value) => value,
+			Slot::Reserved => unreachable!(),
 		}
+	}
+
+	#[inline]
+	#[must_use]
+	pub unsafe fn is_occupied_for<T>(&self, idx: usize) -> bool {
+		let slot = unsafe { self.slots.get_for::<Slot<T>>(idx) };
+
+		slot.occupied()
+	}
+
+	#[inline]
+	#[must_use]
+	pub unsafe fn is_reserved_for<T>(&self, idx: usize) -> bool {
+		let slot = unsafe { self.slots.get_for::<Slot<T>>(idx) };
+
+		slot.reserved()
 	}
 }
 
@@ -286,4 +361,90 @@ fn out_of_bounds_access_is_caught_by_debug_assert() {
 	let v = UnsafeVec::new_for::<u32>();
 	// 何も push していないので、index 0 は既に範囲外。
 	let _ = unsafe { v.get_for::<u32>(0) };
+}
+
+#[test]
+fn reserve_then_write_supports_self_referential_index() {
+	struct Node {
+		self_idx: usize,
+		value: u32,
+	}
+
+	let mut m = UnsafeSlotMap::new_for::<Node>();
+
+	let idx = unsafe { m.reserve_for::<Node>() };
+	// reserve した時点ではまだ値がない。
+	assert!(!unsafe { m.is_occupied_for::<Node>(idx) });
+	assert!(unsafe { m.is_reserved_for::<Node>(idx) });
+	assert_eq!(m.len(), 1, "reserve した時点でそのインデックスは使用中になる");
+
+	// 自分自身のインデックス(今取得した idx)を持つ値を構築できる。
+	let node = Node { self_idx: idx, value: 42 };
+	unsafe { m.write_reserved_for(idx, node) };
+
+	assert!(unsafe { m.is_occupied_for::<Node>(idx) });
+	assert!(!unsafe { m.is_reserved_for::<Node>(idx) });
+
+	let got = unsafe { m.get_for::<Node>(idx) };
+	assert_eq!(got.self_idx, idx);
+	assert_eq!(got.value, 42);
+}
+
+// 意図: reserve したものの構築に失敗する等で書き込まずに諦めるケースで、
+// cancel_reservation_for によりインデックスが正しく空きリストに戻り、
+// 次の insert/reserve で再利用されることを確認する。
+#[test]
+fn cancel_reservation_returns_index_to_free_list() {
+	let mut m = UnsafeSlotMap::new_for::<u32>();
+	let idx = unsafe { m.reserve_for::<u32>() };
+	assert_eq!(m.len(), 1);
+
+	unsafe { m.cancel_reservation_for::<u32>(idx) };
+	assert_eq!(m.len(), 0);
+
+	// キャンセルしたインデックスがinsert時に再利用されるはず
+	let idx2 = unsafe { m.insert_for(7u32) };
+	assert_eq!(idx2, idx);
+	assert_eq!(*unsafe { m.get_for::<u32>(idx2) }, 7);
+}
+
+// 意図: reserve_for と insert_for が同じ free-list を正しく共有できているか
+// (take_slot_for へのリファクタリングで壊れていないか)を、両方を混在させた
+// パターンで確認する。
+#[test]
+fn reserve_for_and_insert_for_share_the_free_list_correctly() {
+	let mut m = UnsafeSlotMap::new_for::<u32>();
+
+	let idx_a = unsafe { m.insert_for(1u32) };
+	let idx_b = unsafe { m.reserve_for::<u32>() };
+	let idx_c = unsafe { m.insert_for(3u32) };
+	assert_eq!((idx_a, idx_b, idx_c), (0, 1, 2));
+
+	// idx_b はまだ reserved のまま、idx_a と idx_c を remove/reserve で
+	// 出し入れしても idx_b の状態が壊れないことを確認する。
+	let removed_a = unsafe { m.remove_for::<u32>(idx_a) };
+	assert_eq!(removed_a, 1);
+	let idx_d = unsafe { m.reserve_for::<u32>() };
+	assert_eq!(idx_d, idx_a, "removeで空いたスロットがLIFOで再利用される");
+
+	assert!(unsafe { m.is_reserved_for::<u32>(idx_b) });
+	assert!(unsafe { m.is_reserved_for::<u32>(idx_d) });
+	assert_eq!(*unsafe { m.get_for::<u32>(idx_c) }, 3);
+
+	unsafe { m.write_reserved_for(idx_b, 20) };
+	unsafe { m.write_reserved_for(idx_d, 40) };
+	assert_eq!(*unsafe { m.get_for::<u32>(idx_b) }, 20);
+	assert_eq!(*unsafe { m.get_for::<u32>(idx_d) }, 40);
+}
+
+// 意図: reserve しただけで write していないスロットに get_for を呼ぶ
+// (Safety契約違反)ときに、`unreachable!` の panic で検出できることを確認する。
+// これは debug_assert ではなく常に有効な `unreachable!` なので、release
+// ビルドでも実行する。
+#[test]
+#[should_panic(expected = "tempo")]
+fn get_for_on_unwritten_reservation_panics() {
+	let mut m = UnsafeSlotMap::new_for::<u32>();
+	let idx = unsafe { m.reserve_for::<u32>() };
+	let _ = unsafe { m.get_for::<u32>(idx) };
 }

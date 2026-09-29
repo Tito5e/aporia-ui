@@ -6,7 +6,7 @@ use winit::{
 	window::{Window, WindowId},
 };
 
-use crate::component::WidgetHandle;
+use crate::storage::WidgetHandle;
 
 pub(crate) struct WindowState {
 	pub(crate) surface: Surface<'static>,

@@ -1,7 +1,8 @@
 use crate::{
-	component::{Builder, NoChild, WidgetHandle},
+	component::{Builder, NoChild},
 	core::geometry::{Constraint, Dimension, Padding, Placement, Size},
 	reactivity::context::Context,
+	storage::WidgetHandle,
 	widget::Widget,
 };
 
@@ -79,7 +80,7 @@ impl<T: Builder> Builder for Block<T> {
 			child,
 		};
 
-		Context::allocate_widget(block_data)
+		Context::insert_widget(block_data)
 	}
 }
 

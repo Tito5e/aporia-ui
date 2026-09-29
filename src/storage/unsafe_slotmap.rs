@@ -26,6 +26,14 @@ pub(crate) struct Key(usize);
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub(crate) struct ReserveKey(usize);
 
+impl ReserveKey {
+	#[inline(always)]
+	#[must_use]
+	pub(crate) unsafe fn as_key(&self) -> Key {
+		Key(self.0)
+	}
+}
+
 #[derive(Debug)]
 pub(crate) struct UnsafeSlotMap {
 	slots: UnsafeVec,

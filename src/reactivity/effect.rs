@@ -1,26 +1,28 @@
-use std::ptr::NonNull;
+use slotmap::new_key_type;
 
-use crate::reactivity::{context::Context, signal::Signal};
+use crate::{
+	reactivity::{context::Context, signal::Signal},
+	storage::Key,
+	widget::Widget,
+};
 
-pub(crate) enum EffectState {
-	Build(NonNull<dyn BuildPhase>),
-	Commit(NonNull<dyn CommitPhase>),
-	Render(NonNull<dyn RenderPhase>),
+new_key_type! {
+	pub(crate) struct EffectKey;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct BuildEffect(pub(crate) NonNull<dyn BuildPhase>);
+pub struct ReconcileHandle {
+	pub(crate) key: EffectKey,
+	vtable: &'static ReconcileVTable,
+}
 
-impl BuildEffect {
-	pub fn new_validated(ptr: *mut dyn BuildPhase) -> Self {
-		Self(unsafe { NonNull::new_unchecked(ptr) })
+impl ReconcileHandle {
+	pub fn new<T: BuildPhase + 'static>(key: EffectKey) -> Self {
+		Self { key, vtable: ReconcileVTable::build::<T>() }
 	}
 
-	pub fn new(ptr: *mut dyn BuildPhase) -> Self {
-		let effect = BuildEffect::new_validated(ptr);
-		Context::invalidate_build_effect(effect);
-
-		effect
+	pub fn invalidate(&self) {
+		Context::invalidate_build_effect(*self);
 	}
 
 	pub fn subscribe<T>(&self, signal: Signal<T>) {
@@ -29,28 +31,98 @@ impl BuildEffect {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) struct CommitEffect(NonNull<dyn CommitPhase>);
+pub(crate) struct ReconcileVTable {
+	on_reconcile: fn(key: Key),
+}
 
-impl CommitEffect {
-	pub fn new(ptr: *mut dyn CommitPhase) -> Self {
-		Self(unsafe { NonNull::new_unchecked(ptr) })
+impl ReconcileVTable {
+	pub(crate) const fn from_method<T: Widget + BuildPhase + 'static>() -> &'static Self {
+		&Self {
+			on_reconcile: |mut key| {
+				let widget = unsafe { Context::get_widget_mut::<T>(&mut key) };
+				widget.on_build_phase();
+			},
+		}
 	}
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) struct RenderEffect(NonNull<dyn RenderPhase>);
+pub(crate) struct CommitHandle {
+	key: EffectKey,
+	vtable: &'static CommitVTable,
+}
 
-impl RenderEffect {
-	pub fn new(ptr: *mut dyn RenderPhase) -> Self {
-		Self(unsafe { NonNull::new_unchecked(ptr) })
+impl CommitHandle {
+	pub fn new<T: CommitPhase + 'static>(key: EffectKey) -> Self {
+		Self { key, vtable: CommitVTable::build::<T>() }
+	}
+
+	pub fn invalidate(&self) {
+		Context::invalidate_commit_effect(*self);
+	}
+
+	pub fn subscribe<T>(&self, signal: Signal<T>) {
+		signal.subscribe(Effect::Commit(*self));
+	}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct CommitVTable {
+	on_commit_phase: fn(key: Key),
+}
+
+impl CommitVTable {
+	const fn build<T: CommitPhase + 'static>() -> &'static Self {
+		&Self {
+			on_commit_phase: |mut key| {
+				let widget = unsafe { Context::get_widget_mut::<T>(&mut key) };
+				widget.on_commit_phase();
+			},
+		}
+	}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct RenderHandle {
+	key: EffectKey,
+	vtable: &'static RenderVTable,
+}
+
+impl RenderHandle {
+	pub fn new<T: RenderPhase + 'static>(key: EffectKey) -> Self {
+		Self { key, vtable: RenderVTable::build::<T>() }
+	}
+
+	pub fn invalidate(&self) {
+		Context::invalidate_render_effect(*self);
+	}
+
+	pub fn subscribe<T>(&self, signal: Signal<T>) {
+		signal.subscribe(Effect::Render(*self));
+	}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct RenderVTable {
+	on_render_phase: fn(key: Key),
+}
+
+impl RenderVTable {
+	const fn build<T: RenderPhase + 'static>() -> &'static Self {
+		&Self {
+			on_render_phase: |mut key| {
+				let widget = unsafe { Context::get_widget_mut::<T>(&mut key) };
+				widget.on_render_phase();
+			},
+		}
 	}
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum Effect {
-	Build(BuildEffect),
-	Commit(CommitEffect),
-	Render(RenderEffect),
+	Build(ReconcileHandle),
+	Commit(CommitHandle),
+	Render(RenderHandle),
 }
 
 impl Effect {

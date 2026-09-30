@@ -31,7 +31,7 @@ impl WidgetVTable {
 }
 
 impl WidgetHandle {
-	pub fn new<T: Widget + 'static>(index: Key) -> Self {
+	pub(crate) fn new<T: Widget + 'static>(index: Key) -> Self {
 		Self { index, vtable: WidgetVTable::build::<T>() }
 	}
 

@@ -166,16 +166,16 @@ impl Context {
 		EffectHandle::new(effect_key, EffectPhase::Render)
 	}
 
-	pub(crate) fn invalidate_build_effect(effect: EffectKey) {
-		CONTEXT.with(|context| context.pending_build.borrow_mut().insert(effect));
+	pub(crate) fn invalidate_build_effect(key: EffectKey) {
+		CONTEXT.with(|context| context.pending_build.borrow_mut().insert(key));
 	}
 
-	pub(crate) fn invalidate_commit_effect(effect: EffectKey) {
-		CONTEXT.with(|context| context.pending_commit.borrow_mut().insert(effect));
+	pub(crate) fn invalidate_commit_effect(key: EffectKey) {
+		CONTEXT.with(|context| context.pending_commit.borrow_mut().insert(key));
 	}
 
-	pub(crate) fn invalidate_render_effect(effect: EffectKey) {
-		CONTEXT.with(|context| context.pending_render.borrow_mut().insert(effect));
+	pub(crate) fn invalidate_render_effect(key: EffectKey) {
+		CONTEXT.with(|context| context.pending_render.borrow_mut().insert(key));
 	}
 
 	pub(crate) fn insert_widget<T: Widget + 'static>(widget: T) -> WidgetHandle {

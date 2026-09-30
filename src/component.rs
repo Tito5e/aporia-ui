@@ -1,10 +1,8 @@
 use crate::{
-	reactivity::{
+	core::geometry::{Constraint, Size}, reactivity::{
 		context::Context,
 		effect::{EffectHandle, ReconcilePhase},
-	},
-	storage::WidgetHandle,
-	widget::Widget,
+	}, storage::WidgetHandle, widget::Widget,
 };
 
 pub trait Builder {
@@ -69,8 +67,8 @@ pub(crate) struct ComponentState<R: Render> {
 impl<R: Render> Widget for ComponentState<R> {
 	fn layout(
 		&mut self,
-		constraint: crate::core::geometry::Constraint,
-	) -> crate::core::geometry::Size {
+		constraint: Constraint,
+	) -> Size {
 		self.child.layout(constraint)
 	}
 }

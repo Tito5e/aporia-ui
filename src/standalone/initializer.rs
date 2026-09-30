@@ -34,7 +34,7 @@ impl<'a> Initializer<'a> {
 			)
 		}
 		.unwrap();
-		let cap = surface.get_capabilities(&self.gpu_adapter);
+		let cap = surface.get_capabilities(self.gpu_adapter);
 		let surface_format = cap.formats[0];
 		let size = window.inner_size();
 		let surface_config = SurfaceConfiguration {

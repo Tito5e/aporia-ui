@@ -113,7 +113,7 @@ impl Context {
 		Signal { state_key, phantom: PhantomData }
 	}
 
-	pub(crate) unsafe fn read_signal<T: 'static>(key: &Key) -> &mut T {
+	pub(crate) unsafe fn read_signal<T: 'static>(key: &mut Key) -> &mut T {
 		debug!("Signal read: {}", type_name::<T>());
 		let ptr = CONTEXT.with(|context| {
 			let mut pools = context.values.borrow_mut();

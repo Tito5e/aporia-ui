@@ -18,7 +18,7 @@ pub(crate) struct SignalState {
 }
 
 impl SignalState {
-	pub unsafe fn read<T: 'static>(&self) -> &T {
+	pub unsafe fn read<T: 'static>(&mut self) -> &T {
 		unsafe { self.value.read() }
 	}
 
@@ -43,12 +43,12 @@ impl SignalValue {
 		Self { key }
 	}
 
-	pub unsafe fn read<T: 'static>(&self) -> &T {
-		unsafe { Context::read_signal::<T>(&self.key) }
+	pub unsafe fn read<T: 'static>(&mut self) -> &T {
+		unsafe { Context::read_signal::<T>(&mut self.key) }
 	}
 
 	pub unsafe fn write<T: 'static>(&mut self, value: T) {
-		let value_ref = unsafe { Context::read_signal::<T>(&self.key) };
+		let value_ref = unsafe { Context::read_signal::<T>(&mut self.key) };
 		*value_ref = value;
 	}
 }

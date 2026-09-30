@@ -62,8 +62,8 @@ fn build_component<R: Render + 'static>(mut render: R) -> WidgetHandle {
 
 pub(crate) struct ComponentState<R: Render> {
 	render: R,
-	child: WidgetHandle,
 	scope: EffectHandle,
+	child: WidgetHandle,
 }
 
 impl<R: Render> Widget for ComponentState<R> {

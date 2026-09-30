@@ -47,7 +47,7 @@ impl<C: Component + 'static> Builder for C {
 
 fn build_component<R: Render + 'static>(mut render: R) -> WidgetHandle {
 	let reservation = Context::reserve_widget::<ComponentState<R>>();
-	let scope = Context::create_reconcile_effect::<ComponentState<R>>();
+	let scope = Context::create_reconcile_effect::<ComponentState<R>>(unsafe { reservation.as_key() });
 
 	let before = Context::get_current_effect();
 	Context::set_current_effect(Some(scope.as_ptr()));

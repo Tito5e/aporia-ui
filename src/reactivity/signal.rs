@@ -104,14 +104,4 @@ impl<T: 'static> Signal<T> {
 			state.subscribers.iter().for_each(|effect| effect.invalidate());
 		}
 	}
-
-	pub(crate) fn subscribe(&self, subscriber: Effect) {
-		unsafe {
-			let state: &mut SignalState = CONTEXT.with(|context| {
-				transmute(context.signals.borrow_mut().get_unchecked_mut(self.state_key)
-					as &mut SignalState)
-			});
-			state.subscribe(subscriber);
-		}
-	}
 }

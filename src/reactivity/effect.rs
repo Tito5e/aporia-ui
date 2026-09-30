@@ -1,9 +1,9 @@
+use std::{collections::HashSet, mem::transmute};
+
 use slotmap::new_key_type;
 
 use crate::{
-	reactivity::{context::Context, signal::Signal},
-	storage::Key,
-	widget::Widget,
+	reactivity::{context::{CONTEXT, Context}, signal::{Signal, SignalKey, SignalState}}, storage::Key, widget::Widget,
 };
 
 new_key_type! {
@@ -17,15 +17,16 @@ pub enum EffectPhase {
 	Render,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct EffectHandle {
 	pub(crate) key: EffectKey,
 	pub(crate) phase: EffectPhase,
+	pub(crate) deps: HashSet<SignalKey>,
 }
 
 impl EffectHandle {
-	pub const fn new(key: EffectKey, phase: EffectPhase) -> Self {
-		Self { key, phase }
+	pub fn new(key: EffectKey, phase: EffectPhase) -> Self {
+		Self { key, phase, deps: HashSet::new() }
 	}
 
 	pub fn invalidate(&self) {
@@ -37,7 +38,13 @@ impl EffectHandle {
 	}
 
 	pub fn subscribe<T: 'static>(&self, signal: Signal<T>) {
-		signal.subscribe(self.as_ptr());
+		unsafe {
+			let state: &mut SignalState = CONTEXT.with(|context| {
+				transmute(context.signals.borrow_mut().get_unchecked_mut(signal.state_key)
+					as &mut SignalState)
+			});
+			state.subscribe(self.as_ptr());
+		}
 	}
 
 	pub const fn as_ptr(&self) -> Effect {
@@ -61,11 +68,17 @@ impl Effect {
 	}
 
 	pub fn subscribe<T: 'static>(&self, signal: Signal<T>) {
-		signal.subscribe(*self);
+		unsafe {
+			let state: &mut SignalState = CONTEXT.with(|context| {
+				transmute(context.signals.borrow_mut().get_unchecked_mut(signal.state_key)
+					as &mut SignalState)
+			});
+			state.subscribe(*self);
+		}
 	}
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct EffectVTable {
 	run: fn(key: Key),
 }
@@ -86,6 +99,11 @@ impl EffectVTable {
 			},
 		}
 	}
+}
+
+pub struct EffectData {
+	pub(crate) vtable: &'static EffectVTable,
+	pub(crate) key: Key
 }
 
 pub trait ReconcilePhase {

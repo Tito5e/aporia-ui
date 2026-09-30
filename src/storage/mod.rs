@@ -1,4 +1,3 @@
-mod registration;
 mod unsafe_slotmap;
 mod unsafe_vec;
 mod widget;

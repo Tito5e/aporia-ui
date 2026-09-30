@@ -1,7 +1,7 @@
 use crate::{
 	reactivity::{
 		context::Context,
-		effect::{BuildPhase, ReconcileHandle},
+		effect::{EffectHandle, ReconcilePhase},
 	},
 	storage::WidgetHandle,
 	widget::Widget,
@@ -20,34 +20,53 @@ impl Builder for NoChild {
 	}
 }
 
+pub trait Render {
+	type Output: Builder;
+	#[doc(hidden)]
+	fn render(&mut self) -> Self::Output;
+}
+
+impl<F, B> Render for F
+where
+	F: FnMut() -> B,
+	B: Builder,
+{
+	type Output = B;
+	fn render(&mut self) -> B {
+		self()
+	}
+}
+
 pub trait Component {
-	fn view(&self) -> impl Builder;
+	fn view(self) -> impl Render + 'static;
 }
 
 impl<C: Component + 'static> Builder for C {
 	fn build(self) -> WidgetHandle {
-		let reservation = Context::reserve_widget::<ComponentState<C>>();
-		let scope = Context::create_build_effect::<ComponentState<C>>();
-		let before_scope = Context::get_current_effect();
-		Context::set_current_effect(Some(scope));
-		let child_builder = self.view();
-		Context::set_current_effect(before_scope);
-		let child = child_builder.build();
-
-		let state = ComponentState { component: self, child, scope };
-		let handle = reservation.write(state);
-
-		handle
+		build_component(self.view())
 	}
 }
 
-pub(crate) struct ComponentState<C: Component> {
-	component: C,
-	child: WidgetHandle,
-	scope: ReconcileHandle,
+fn build_component<R: Render + 'static>(mut render: R) -> WidgetHandle {
+	let reservation = Context::reserve_widget::<ComponentState<R>>();
+	let scope = Context::create_reconcile_effect::<ComponentState<R>>();
+
+	let before = Context::get_current_effect();
+	Context::set_current_effect(Some(scope.as_ptr()));
+	let child_builder = render.render();
+	Context::set_current_effect(before);
+
+	let child = child_builder.build();
+	reservation.write(ComponentState { render, child, scope })
 }
 
-impl<C: Component> Widget for ComponentState<C> {
+pub(crate) struct ComponentState<R: Render> {
+	render: R,
+	child: WidgetHandle,
+	scope: EffectHandle,
+}
+
+impl<R: Render> Widget for ComponentState<R> {
 	fn layout(
 		&mut self,
 		constraint: crate::core::geometry::Constraint,
@@ -56,13 +75,12 @@ impl<C: Component> Widget for ComponentState<C> {
 	}
 }
 
-impl<C: Component> BuildPhase for ComponentState<C> {
-	fn on_build_phase(&mut self) {
+impl<R: Render> ReconcilePhase for ComponentState<R> {
+	fn on_reconcile_phase(&mut self) {
 		let before_scope = Context::get_current_effect();
-		Context::set_current_effect(Some(self.scope));
-		let child_builder = self.component.view();
+		Context::set_current_effect(Some(self.scope.as_ptr()));
+		let child_builder = self.render.render();
 		Context::set_current_effect(before_scope);
-		let child = child_builder.build();
-		self.child = child;
+		self.child = child_builder.build();
 	}
 }

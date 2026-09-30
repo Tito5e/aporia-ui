@@ -1,10 +1,13 @@
 use slotmap::new_key_type;
 
-use crate::reactivity::{
-	context::{CONTEXT, Context},
-	effect::Effect,
+use crate::{
+	reactivity::{
+		context::{CONTEXT, Context},
+		effect::Effect,
+	},
+	storage::Key,
 };
-use std::{collections::HashSet, ffi::c_void, marker::PhantomData, mem::transmute};
+use std::{collections::HashSet, marker::PhantomData, mem::transmute};
 
 new_key_type! { pub(crate) struct SignalKey; }
 
@@ -15,11 +18,11 @@ pub(crate) struct SignalState {
 }
 
 impl SignalState {
-	pub unsafe fn read<T>(&self) -> &T {
+	pub unsafe fn read<T: 'static>(&self) -> &T {
 		unsafe { self.value.read() }
 	}
 
-	pub unsafe fn write<T>(&mut self, value: T) {
+	pub unsafe fn write<T: 'static>(&mut self, value: T) {
 		unsafe {
 			self.value.write(value);
 		}
@@ -32,22 +35,20 @@ impl SignalState {
 
 /// Type Erased Value
 pub(crate) struct SignalValue {
-	ptr: *mut c_void,
+	key: Key,
 }
 
 impl SignalValue {
-	pub fn new(ptr: *mut c_void) -> Self {
-		Self { ptr }
+	pub fn new(key: Key) -> Self {
+		Self { key }
 	}
 
-	pub unsafe fn read<T>(&self) -> &T {
-		let typed_ptr = self.ptr as *const T;
-
-		unsafe { &*typed_ptr }
+	pub unsafe fn read<T: 'static>(&self) -> &T {
+		unsafe { Context::read_signal::<T>(&self.key) }
 	}
 
-	pub unsafe fn write<T>(&mut self, value: T) {
-		let value_ref = unsafe { &mut *(self.ptr as *mut T) };
+	pub unsafe fn write<T: 'static>(&mut self, value: T) {
+		let value_ref = unsafe { Context::read_signal::<T>(&self.key) };
 		*value_ref = value;
 	}
 }
@@ -57,14 +58,14 @@ pub struct Signal<T> {
 	pub(crate) phantom: PhantomData<T>,
 }
 
-impl<T> Signal<T> {
+impl<T: 'static> Signal<T> {
 	pub fn new(initial_value: T) -> Self {
 		let signal = Context::create_signal(initial_value);
 
 		signal
 	}
 
-	pub(crate) fn get_untracked(&self) -> &T {
+	pub(crate) unsafe fn get_untracked(&self) -> &T {
 		unsafe {
 			let state: &mut SignalState = CONTEXT.with(|context| {
 				transmute(context.signals.borrow_mut().get_unchecked_mut(self.state_key)
@@ -84,7 +85,7 @@ impl<T> Signal<T> {
 
 			let current_scope = Context::get_current_effect();
 			if let Some(current_scope) = current_scope {
-				state.subscribe(Effect::Build(current_scope));
+				state.subscribe(current_scope);
 			} else {
 				panic!("Dont read signal value outside Component")
 			}

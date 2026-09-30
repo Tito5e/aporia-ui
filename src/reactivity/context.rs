@@ -2,7 +2,6 @@ use std::{
 	any::{TypeId, type_name},
 	cell::RefCell,
 	collections::{HashMap, HashSet},
-	ffi::c_void,
 	marker::PhantomData,
 	mem::ManuallyDrop,
 	ptr,
@@ -13,10 +12,9 @@ use slotmap::SlotMap;
 
 use crate::{
 	reactivity::{
-		allocator::GeneralStorage,
 		effect::{
-			BuildPhase, CommitHandle, CommitVTable, EffectKey, ReconcileHandle, ReconcileVTable,
-			RenderHandle, RenderVTable,
+			CommitPhase, Effect, EffectHandle, EffectKey, EffectPhase, EffectVTable,
+			ReconcilePhase, RenderPhase,
 		},
 		signal::{Signal, SignalKey, SignalState, SignalValue},
 	},
@@ -30,12 +28,12 @@ thread_local! {
 
 const SIGNAL_SIZE: usize = 64;
 
-pub(crate) struct Reservation<T: 'static> {
+pub(crate) struct Reservation<T: Widget + 'static> {
 	key: ReserveKey,
 	_phantom: PhantomData<T>,
 }
 
-impl<T: 'static> Reservation<T> {
+impl<T: Widget + 'static> Reservation<T> {
 	fn new(key: ReserveKey) -> Self {
 		Self { key, _phantom: PhantomData }
 	}
@@ -51,7 +49,7 @@ impl<T: 'static> Reservation<T> {
 	}
 }
 
-impl<T> Drop for Reservation<T> {
+impl<T: Widget + 'static> Drop for Reservation<T> {
 	fn drop(&mut self) {
 		let key = unsafe { ptr::read(&self.key) };
 		unsafe { Context::cancel_reservation::<T>(key) }
@@ -64,30 +62,35 @@ pub(crate) struct Context {
 	pub(crate) signals: RefCell<SlotMap<SignalKey, SignalState>>,
 
 	/// for SignalValue
-	pub(crate) values: RefCell<GeneralStorage>,
+	pub(crate) values: RefCell<HashMap<TypeId, UnsafeSlotMap>>,
 
 	/// for Components
 	pub(crate) widgets: RefCell<HashMap<TypeId, UnsafeSlotMap>>,
 
 	/// for Effects
-	pub(crate) reconcile_effects: RefCell<SlotMap<EffectKey, &'static ReconcileVTable>>,
-	pub(crate) commit_effects: RefCell<SlotMap<EffectKey, &'static CommitVTable>>,
-	pub(crate) render_effects: RefCell<SlotMap<EffectKey, &'static RenderVTable>>,
+	pub(crate) reconcile_effects: RefCell<SlotMap<EffectKey, &'static EffectVTable>>,
+	pub(crate) commit_effects: RefCell<SlotMap<EffectKey, &'static EffectVTable>>,
+	pub(crate) render_effects: RefCell<SlotMap<EffectKey, &'static EffectVTable>>,
 
 	/// dirty subscribers
 	pub(crate) pending_build: RefCell<HashSet<EffectKey>>,
 	pub(crate) pending_commit: RefCell<HashSet<EffectKey>>,
 	pub(crate) pending_render: RefCell<HashSet<EffectKey>>,
 
-	pub(crate) current_effect: RefCell<Option<ReconcileHandle>>,
+	pub(crate) current_effect: RefCell<Option<Effect>>,
 }
 
 impl Context {
 	pub(crate) fn new() -> Self {
 		Self {
 			signals: RefCell::new(SlotMap::with_key()),
-			values: RefCell::new(GeneralStorage::new()),
+			values: RefCell::new(HashMap::new()),
 			widgets: RefCell::new(HashMap::new()),
+
+			reconcile_effects: RefCell::new(SlotMap::with_key()),
+			commit_effects: RefCell::new(SlotMap::with_key()),
+			render_effects: RefCell::new(SlotMap::with_key()),
+
 			pending_build: RefCell::new(HashSet::new()),
 			pending_commit: RefCell::new(HashSet::new()),
 			pending_render: RefCell::new(HashSet::new()),
@@ -95,40 +98,83 @@ impl Context {
 		}
 	}
 
-	pub(crate) fn create_signal<T>(initial_value: T) -> Signal<T> {
-		let value_ptr = CONTEXT.with(|context| context.values.borrow_mut().alloc(initial_value));
-		let value = SignalValue::new(value_ptr as *mut c_void);
+	pub(crate) fn create_signal<T: 'static>(initial_value: T) -> Signal<T> {
+		let value_key = CONTEXT.with(|context| {
+			let mut value_pools = context.values.borrow_mut();
+			let value_pool =
+				value_pools.entry(TypeId::of::<T>()).or_insert_with(|| UnsafeSlotMap::new::<T>());
+
+			unsafe { value_pool.insert::<T>(initial_value) }
+		});
+		let value = SignalValue::new(value_key);
 		let state = SignalState { value, subscribers: HashSet::new() };
 		let state_key = CONTEXT.with(|context| context.signals.borrow_mut().insert(state));
 
 		Signal { state_key, phantom: PhantomData }
 	}
 
-	pub(crate) fn get_current_effect() -> Option<ReconcileHandle> {
+	pub(crate) unsafe fn read_signal<T: 'static>(key: &Key) -> &mut T {
+		debug!("Signal read: {}", type_name::<T>());
+		let ptr = CONTEXT.with(|context| {
+			let mut pools = context.values.borrow_mut();
+			let pool =
+				pools.get_mut(&TypeId::of::<T>()).expect("Widget type has not been registered.");
+
+			unsafe { pool.get(*key) as *const T as *mut T }
+		});
+		unsafe { &mut *ptr }
+	}
+
+	pub(crate) fn get_current_effect() -> Option<Effect> {
 		CONTEXT.with(|context| *context.current_effect.borrow())
 	}
 
-	pub(crate) fn set_current_effect(effect: Option<ReconcileHandle>) {
+	pub(crate) fn set_current_effect(effect: Option<Effect>) {
 		CONTEXT.with(|context| context.current_effect.replace(effect));
 	}
 
-	pub(crate) fn create_build_effect<T: BuildPhase + 'static>() -> ReconcileHandle {
+	pub(crate) fn create_reconcile_effect<T: Widget + ReconcilePhase + 'static>() -> EffectHandle {
 		let effect_key = CONTEXT.with(|context| {
-			context.reconcile_effects.borrow_mut().insert(ReconcileVTable::build::<T>())
+			context
+				.reconcile_effects
+				.borrow_mut()
+				.insert(EffectVTable::from_method::<T, _>(T::on_reconcile_phase))
 		});
 
-		ReconcileHandle::new::<T>(effect_key)
+		EffectHandle::new(effect_key, EffectPhase::Reconcile)
 	}
 
-	pub(crate) fn invalidate_build_effect(effect: ReconcileHandle) {
-		CONTEXT.with(|context| context.pending_build.borrow_mut().insert(effect.key));
+	pub(crate) fn create_commit_effect<T: Widget + CommitPhase + 'static>() -> EffectHandle {
+		let effect_key = CONTEXT.with(|context| {
+			context
+				.commit_effects
+				.borrow_mut()
+				.insert(EffectVTable::from_method::<T, _>(T::on_commit_phase))
+		});
+
+		EffectHandle::new(effect_key, EffectPhase::Commit)
 	}
 
-	pub(crate) fn invalidate_commit_effect(effect: CommitHandle) {
+	pub(crate) fn create_render_effect<T: Widget + RenderPhase + 'static>() -> EffectHandle {
+		let effect_key = CONTEXT.with(|context| {
+			context
+				.commit_effects
+				.borrow_mut()
+				.insert(EffectVTable::from_method::<T, _>(T::on_render_phase))
+		});
+
+		EffectHandle::new(effect_key, EffectPhase::Render)
+	}
+
+	pub(crate) fn invalidate_build_effect(effect: EffectKey) {
+		CONTEXT.with(|context| context.pending_build.borrow_mut().insert(effect));
+	}
+
+	pub(crate) fn invalidate_commit_effect(effect: EffectKey) {
 		CONTEXT.with(|context| context.pending_commit.borrow_mut().insert(effect));
 	}
 
-	pub(crate) fn invalidate_render_effect(effect: RenderHandle) {
+	pub(crate) fn invalidate_render_effect(effect: EffectKey) {
 		CONTEXT.with(|context| context.pending_render.borrow_mut().insert(effect));
 	}
 

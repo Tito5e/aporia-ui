@@ -25,10 +25,16 @@ pub struct Block<T: Builder> {
 impl Block<NoChild> {
 	#[inline]
 	pub fn new() -> Self {
-		// TODO: Defaultを用いた実装に切り替える
+		Self::default()
+	}
+}
+
+impl Default for Block<NoChild> {
+	#[inline]
+	fn default() -> Self {
 		Self {
-			row_placement: Placement::Start,
-			col_placement: Placement::Start,
+			row_placement: Placement::Center,
+			col_placement: Placement::Center,
 
 			padding: Padding { top: 0.0, bottom: 0.0, left: 0.0, right: 0.0 },
 			width: Dimension { percent: 0.0, px: 0.0 },

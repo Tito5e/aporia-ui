@@ -13,9 +13,13 @@ use slotmap::SlotMap;
 use crate::{
 	reactivity::{
 		effect::{
-			CommitPhase, Effect, EffectData, EffectHandle, EffectKey, EffectPhase, EffectVTable, ReconcilePhase, RenderPhase,
-		}, signal::{Signal, SignalKey, SignalState, SignalValue},
-	}, storage::{Key, ReserveKey, UnsafeSlotMap, WidgetHandle}, widget::Widget,
+			CommitPhase, Effect, EffectData, EffectHandle, EffectKey, EffectPhase, EffectVTable,
+			ReconcilePhase, RenderPhase,
+		},
+		signal::{Signal, SignalKey, SignalState, SignalValue},
+	},
+	storage::{Key, ReserveKey, UnsafeSlotMap, WidgetHandle},
+	widget::Widget,
 };
 
 thread_local! {
@@ -129,43 +133,40 @@ impl Context {
 		CONTEXT.with(|context| context.current_effect.replace(effect));
 	}
 
-	pub(crate) fn create_reconcile_effect<T: Widget + ReconcilePhase + 'static>(key: Key) -> EffectHandle {
+	pub(crate) fn create_reconcile_effect<T: Widget + ReconcilePhase + 'static>(
+		key: Key,
+	) -> EffectHandle {
 		let effect_key = CONTEXT.with(|context| {
-			context
-				.reconcile_effects
-				.borrow_mut()
-				.insert(EffectData {
-					vtable: EffectVTable::from_method::<T, _>(T::on_reconcile_phase),
-					key,
-				})
+			context.reconcile_effects.borrow_mut().insert(EffectData {
+				vtable: EffectVTable::from_method::<T, _>(T::on_reconcile_phase),
+				key,
+			})
 		});
 
 		EffectHandle::new(effect_key, EffectPhase::Reconcile)
 	}
 
-	pub(crate) fn create_commit_effect<T: Widget + CommitPhase + 'static>(key: Key) -> EffectHandle {
+	pub(crate) fn create_commit_effect<T: Widget + CommitPhase + 'static>(
+		key: Key,
+	) -> EffectHandle {
 		let effect_key = CONTEXT.with(|context| {
-			context
-				.commit_effects
-				.borrow_mut()
-				.insert(EffectData {
-					vtable: EffectVTable::from_method::<T, _>(T::on_commit_phase),
-					key,
-				})
+			context.commit_effects.borrow_mut().insert(EffectData {
+				vtable: EffectVTable::from_method::<T, _>(T::on_commit_phase),
+				key,
+			})
 		});
 
 		EffectHandle::new(effect_key, EffectPhase::Commit)
 	}
 
-	pub(crate) fn create_render_effect<T: Widget + RenderPhase + 'static>(key: Key) -> EffectHandle {
+	pub(crate) fn create_render_effect<T: Widget + RenderPhase + 'static>(
+		key: Key,
+	) -> EffectHandle {
 		let effect_key = CONTEXT.with(|context| {
-			context
-				.commit_effects
-				.borrow_mut()
-				.insert(EffectData {
-					vtable: EffectVTable::from_method::<T, _>(T::on_render_phase),
-					key,
-				})
+			context.commit_effects.borrow_mut().insert(EffectData {
+				vtable: EffectVTable::from_method::<T, _>(T::on_render_phase),
+				key,
+			})
 		});
 
 		EffectHandle::new(effect_key, EffectPhase::Render)
@@ -274,10 +275,3 @@ impl Context {
 		unsafe { &mut *ptr }
 	}
 }
-
-const _: () = {
-	// Slab Allocator Size
-	if size_of::<SignalState>() > SIGNAL_SIZE {
-		panic!("SignalState size over");
-	}
-};

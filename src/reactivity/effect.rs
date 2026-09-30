@@ -3,7 +3,12 @@ use std::{collections::HashSet, mem::transmute};
 use slotmap::new_key_type;
 
 use crate::{
-	reactivity::{context::{CONTEXT, Context}, signal::{Signal, SignalKey, SignalState}}, storage::Key, widget::Widget,
+	reactivity::{
+		context::{CONTEXT, Context},
+		signal::{Signal, SignalKey, SignalState},
+	},
+	storage::Key,
+	widget::Widget,
 };
 
 new_key_type! {
@@ -103,7 +108,7 @@ impl EffectVTable {
 
 pub struct EffectData {
 	pub(crate) vtable: &'static EffectVTable,
-	pub(crate) key: Key
+	pub(crate) key: Key,
 }
 
 pub trait ReconcilePhase {

@@ -13,9 +13,9 @@ impl MainView {
 }
 
 impl Component for MainView {
-	fn view(self) -> impl Render + 'static {
+	fn view(self) -> impl Render {
 		let count = Signal::new(0);
 
-		move || Block::new()
+		move || Block::new().child(Block::new())
 	}
 }

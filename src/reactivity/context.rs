@@ -2,9 +2,9 @@ use std::{
 	any::{TypeId, type_name},
 	cell::RefCell,
 	collections::{HashMap, HashSet},
+	ffi::c_void,
 	marker::PhantomData,
-	mem::ManuallyDrop,
-	ptr,
+	ptr::NonNull,
 };
 
 use log::debug;
@@ -18,42 +18,12 @@ use crate::{
 		},
 		signal::{Signal, SignalKey, SignalState, SignalValue},
 	},
-	storage::{Key, ReserveKey, UnsafeSlotMap, WidgetHandle},
+	storage::{Key, UnsafeSlotMap},
 	widget::Widget,
 };
 
 thread_local! {
 	pub(crate) static CONTEXT: Context = Context::new();
-}
-
-const SIGNAL_SIZE: usize = 64;
-
-pub(crate) struct Reservation<T: Widget + 'static> {
-	key: ReserveKey,
-	_phantom: PhantomData<T>,
-}
-
-impl<T: Widget + 'static> Reservation<T> {
-	fn new(key: ReserveKey) -> Self {
-		Self { key, _phantom: PhantomData }
-	}
-
-	pub(crate) fn write(self, widget: T) -> WidgetHandle {
-		let this = ManuallyDrop::new(self);
-		let key = unsafe { ptr::read(&this.key) };
-		unsafe { Context::write_widget(key, widget) }
-	}
-
-	pub(crate) unsafe fn as_key(&self) -> Key {
-		unsafe { self.key.as_key() }
-	}
-}
-
-impl<T: Widget + 'static> Drop for Reservation<T> {
-	fn drop(&mut self) {
-		let key = unsafe { ptr::read(&self.key) };
-		unsafe { Context::cancel_reservation::<T>(key) }
-	}
 }
 
 // TODO: パフォーマンス計測が必要
@@ -63,9 +33,6 @@ pub(crate) struct Context {
 
 	/// for SignalValue
 	pub(crate) values: RefCell<HashMap<TypeId, UnsafeSlotMap>>,
-
-	/// for Components
-	pub(crate) widgets: RefCell<HashMap<TypeId, UnsafeSlotMap>>,
 
 	/// for Effects
 	pub(crate) reconcile_effects: RefCell<SlotMap<EffectKey, EffectData>>,
@@ -85,7 +52,6 @@ impl Context {
 		Self {
 			signals: RefCell::new(SlotMap::with_key()),
 			values: RefCell::new(HashMap::new()),
-			widgets: RefCell::new(HashMap::new()),
 
 			reconcile_effects: RefCell::new(SlotMap::with_key()),
 			commit_effects: RefCell::new(SlotMap::with_key()),
@@ -134,7 +100,7 @@ impl Context {
 	}
 
 	pub(crate) fn create_reconcile_effect<T: Widget + ReconcilePhase + 'static>(
-		key: Key,
+		key: NonNull<c_void>,
 	) -> EffectHandle {
 		let effect_key = CONTEXT.with(|context| {
 			context.reconcile_effects.borrow_mut().insert(EffectData {
@@ -182,96 +148,5 @@ impl Context {
 
 	pub(crate) fn invalidate_render_effect(key: EffectKey) {
 		CONTEXT.with(|context| context.pending_render.borrow_mut().insert(key));
-	}
-
-	pub(crate) fn insert_widget<T: Widget + 'static>(widget: T) -> WidgetHandle {
-		debug!("Widget insert: {}", type_name::<T>());
-		let idx = CONTEXT.with(|context| {
-			let mut pools = context.widgets.borrow_mut();
-			let pool = pools.entry(TypeId::of::<T>()).or_insert_with(|| UnsafeSlotMap::new::<T>());
-
-			unsafe { pool.insert::<T>(widget) }
-		});
-
-		WidgetHandle::new::<T>(idx)
-	}
-
-	pub(crate) fn reserve_widget<T: Widget + 'static>() -> Reservation<T> {
-		debug!("Widget reserve: {}", type_name::<T>());
-		CONTEXT.with(|context| {
-			let mut pools = context.widgets.borrow_mut();
-			let pool = pools.entry(TypeId::of::<T>()).or_insert_with(|| UnsafeSlotMap::new::<T>());
-
-			let reserve_key = unsafe { pool.reserve::<T>() };
-
-			Reservation::new(reserve_key)
-		})
-	}
-
-	pub(crate) unsafe fn cancel_reservation<T: Widget + 'static>(reservation: ReserveKey) {
-		debug!("Widget reserve cancel: {}", type_name::<T>());
-		CONTEXT.with(|context| {
-			let mut pools = context.widgets.borrow_mut();
-			let pool =
-				pools.get_mut(&TypeId::of::<T>()).expect("Widget type has not been registered.");
-
-			unsafe { pool.cancel::<T>(reservation) }
-		});
-	}
-
-	unsafe fn write_widget<T: Widget + 'static>(
-		reservation: ReserveKey,
-		widget: T,
-	) -> WidgetHandle {
-		debug!("Widget write: {}", type_name::<T>());
-		let idx = CONTEXT.with(|context| {
-			let mut pools = context.widgets.borrow_mut();
-			let pool = pools.entry(TypeId::of::<T>()).or_insert_with(|| UnsafeSlotMap::new::<T>());
-
-			unsafe { pool.write(reservation, widget) }
-		});
-
-		WidgetHandle::new::<T>(idx)
-	}
-
-	pub(crate) unsafe fn remove_widget<T: Widget + 'static>(key: Key) -> T {
-		debug!("Widget remove: {}", type_name::<T>());
-		CONTEXT.with(|context| {
-			let mut pools = context.widgets.borrow_mut();
-			let pool =
-				pools.get_mut(&TypeId::of::<T>()).expect("Widget type has not been registered.");
-
-			unsafe { pool.remove(key) }
-		})
-	}
-
-	/// #Safety
-	/// `T`は`handle`の確保時に使われた型と一致していなければならない
-	/// この関数で確保した参照は"正しく"使われる必要がある
-	/// * handleが`remove_widget`される前に参照を破棄する必要がある
-	/// * `Context::insert_widget`、`Context::reserve_widget`のどちらかの関数を呼び出す前に参照を破棄する必要がある
-	pub(crate) unsafe fn get_widget<T: Widget + 'static>(key: &Key) -> &T {
-		debug!("Widget referenced: {}", type_name::<T>());
-		let ptr = CONTEXT.with(|context| {
-			let mut pools = context.widgets.borrow_mut();
-			let pool =
-				pools.get_mut(&TypeId::of::<T>()).expect("Widget type has not been registered.");
-
-			unsafe { pool.get(*key) as *const T }
-		});
-		unsafe { &*ptr }
-	}
-
-	pub(crate) unsafe fn get_widget_mut<T: Widget + 'static>(key: &mut Key) -> &mut T {
-		debug!("Widget mutable referenced: {}", type_name::<T>());
-		let ptr = CONTEXT.with(|context| {
-			let mut pools = context.widgets.borrow_mut();
-			let pool =
-				pools.get_mut(&TypeId::of::<T>()).expect("Widget type has not been registered.");
-
-			unsafe { pool.get(*key) as *const T as *mut T }
-		});
-
-		unsafe { &mut *ptr }
 	}
 }

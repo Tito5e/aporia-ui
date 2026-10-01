@@ -1,4 +1,4 @@
-use std::{collections::HashSet, mem::transmute};
+use std::{collections::HashSet, ffi::c_void, mem::transmute, ptr::NonNull};
 
 use slotmap::new_key_type;
 
@@ -85,7 +85,7 @@ impl Effect {
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct EffectVTable {
-	run: fn(key: Key),
+	run: fn(ptr: NonNull<c_void>),
 }
 
 impl EffectVTable {
@@ -97,10 +97,9 @@ impl EffectVTable {
 		const { assert!(core::mem::size_of::<F>() == 0) }
 
 		&Self {
-			run: |mut key| {
-				let widget = unsafe { Context::get_widget_mut::<T>(&mut key) };
-				let f: F = unsafe { core::mem::zeroed() };
-				f(widget);
+			run: |ptr| {
+				let widget = unsafe { &mut *ptr.as_ptr().cast::<T>() };
+				(widget);
 			},
 		}
 	}
@@ -108,7 +107,7 @@ impl EffectVTable {
 
 pub struct EffectData {
 	pub(crate) vtable: &'static EffectVTable,
-	pub(crate) key: Key,
+	pub(crate) ptr: NonNull<c_void>,
 }
 
 pub trait ReconcilePhase {

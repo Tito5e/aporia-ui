@@ -21,65 +21,45 @@ impl Builder for NoChild {
 	}
 }
 
-pub trait Render {
-	type Output: Builder;
-	#[doc(hidden)]
-	fn render(&mut self) -> Self::Output;
-}
-
-impl<F, B> Render for F
-where
-	F: FnMut() -> B,
-	B: Builder,
-{
-	type Output = B;
-	fn render(&mut self) -> B {
-		self()
-	}
-}
-
-pub trait Component {
-	fn view(self) -> impl Render + 'static;
+pub trait Component: Sized {
+	fn view(&self) -> WidgetHandle;
 }
 
 impl<C: Component + 'static> Builder for C {
 	fn build(self) -> WidgetHandle {
-		build_component(self.view())
+		let reservation = WidgetHandle::reserve::<ComponentState<C>>();
+		let scope =
+			Context::create_reconcile_effect::<ComponentState<C>>(unsafe { reservation.as_ptr() });
+
+		let before = Context::get_current_effect();
+		Context::set_current_effect(Some(scope.as_ptr()));
+		let child = self.view();
+		Context::set_current_effect(before);
+
+		let handle = reservation.write(ComponentState { component: self, scope, child });
+
+		handle
 	}
 }
 
-fn build_component<R: Render + 'static>(mut render: R) -> WidgetHandle {
-	let reservation = Context::reserve_widget::<ComponentState<R>>();
-	let scope =
-		Context::create_reconcile_effect::<ComponentState<R>>(unsafe { reservation.as_key() });
-
-	let before = Context::get_current_effect();
-	Context::set_current_effect(Some(scope.as_ptr()));
-	let child_builder = render.render();
-	Context::set_current_effect(before);
-
-	let child = child_builder.build();
-	reservation.write(ComponentState { render, child, scope })
-}
-
-pub(crate) struct ComponentState<R: Render> {
-	render: R,
+pub(crate) struct ComponentState<C: Component> {
+	component: C,
 	scope: EffectHandle,
 	child: WidgetHandle,
 }
 
-impl<R: Render> Widget for ComponentState<R> {
+impl<C: Component> Widget for ComponentState<C> {
 	fn layout(&mut self, constraint: Constraint) -> Size {
 		self.child.layout(constraint)
 	}
 }
 
-impl<R: Render> ReconcilePhase for ComponentState<R> {
+impl<C: Component + 'static> ReconcilePhase for ComponentState<C> {
 	fn on_reconcile_phase(&mut self) {
-		let before_scope = Context::get_current_effect();
+		let before = Context::get_current_effect();
 		Context::set_current_effect(Some(self.scope.as_ptr()));
-		let child_builder = self.render.render();
-		Context::set_current_effect(before_scope);
-		self.child = child_builder.build();
+		let new_child = self.component.view();
+		Context::set_current_effect(before);
+		self.child = new_child;
 	}
 }

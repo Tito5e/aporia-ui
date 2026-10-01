@@ -86,7 +86,7 @@ impl<T: Builder> Builder for Block<T> {
 			child,
 		};
 
-		Context::insert_widget(block_data)
+		WidgetHandle::new(block_data)
 	}
 }
 

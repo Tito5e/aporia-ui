@@ -193,6 +193,19 @@ impl UnsafeSlotMap {
 			Slot::Reserved => panic!("The slot referenced by the Key is Slot::Reserved."),
 		}
 	}
+
+	#[inline]
+	#[must_use]
+	pub unsafe fn swap_remove<T>(&mut self, idx: Key) -> (T, ReserveKey) {
+		let slot = unsafe { self.slots.get_mut_for::<Slot<T>>(idx.0) };
+		let slot_data = std::mem::replace(slot, Slot::Reserved);
+
+		match slot_data {
+			Slot::Empty(_) => panic!("The slot referenced by the Key is Slot::Empty"),
+			Slot::Occupied(value) => (value, ReserveKey(idx.0)),
+			Slot::Reserved => panic!("The slot referenced by the Key is Slot::Reserved"),
+		}
+	}
 }
 
 #[test]

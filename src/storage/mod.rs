@@ -7,4 +7,4 @@ pub(crate) use unsafe_pool::UnsafePool;
 pub(crate) use unsafe_slotmap::Key;
 pub(crate) use unsafe_slotmap::UnsafeSlotMap;
 pub(crate) use widget::Reservation;
-pub(crate) use widget::WidgetHandle;
+pub use widget::WidgetHandle;

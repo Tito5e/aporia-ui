@@ -50,6 +50,7 @@ impl WidgetType {
 	}
 
 	#[inline]
+	#[allow(clippy::mut_from_ref)]
 	unsafe fn pool(&'static self) -> &'static mut UnsafePool {
 		unsafe { &mut *self.pool.get() }
 	}

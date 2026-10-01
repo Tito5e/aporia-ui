@@ -1,5 +1,5 @@
 use aporia_ui::{
-	component::{Builder, Component, Finalized, Finalizer},
+	component::{Component, View},
 	reactivity::signal::Signal,
 	widget::Block,
 };
@@ -15,11 +15,11 @@ impl MainView {
 }
 
 impl Component for MainView {
-	fn view(self, finalizer: Finalizer<Self>) -> Finalized {
+	fn view(&self) -> View {
 		if self.count.get() == &2 {
-			finalizer.finalize(self, Block::new())
+			Block::new().into()
 		} else {
-			finalizer.finalize(self, Block::new().child(Block::new()))
+			Block::new().child(Block::new()).into()
 		}
 	}
 }

@@ -21,24 +21,29 @@ impl Builder for NoChild {
 	}
 }
 
-pub trait Component: Sized {
-	fn view(&self) -> WidgetHandle;
+pub struct View(WidgetHandle);
+
+impl<B: Builder> From<B> for View {
+	fn from(value: B) -> Self {
+		Self(value.build())
+	}
+}
+
+pub trait Component {
+	fn view(&self) -> View;
 }
 
 impl<C: Component + 'static> Builder for C {
 	fn build(self) -> WidgetHandle {
 		let reservation = WidgetHandle::reserve::<ComponentState<C>>();
-		let scope =
-			Context::create_reconcile_effect::<ComponentState<C>>(unsafe { reservation.as_ptr() });
+		let scope = Context::create_reconcile_effect::<ComponentState<C>>(reservation.as_ptr());
 
 		let before = Context::get_current_effect();
 		Context::set_current_effect(Some(scope.as_ptr()));
 		let child = self.view();
 		Context::set_current_effect(before);
 
-		let handle = reservation.write(ComponentState { component: self, scope, child });
-
-		handle
+		reservation.write(ComponentState { component: self, scope, child: child.0 })
 	}
 }
 
@@ -60,6 +65,6 @@ impl<C: Component + 'static> ReconcilePhase for ComponentState<C> {
 		Context::set_current_effect(Some(self.scope.as_ptr()));
 		let new_child = self.component.view();
 		Context::set_current_effect(before);
-		self.child = new_child;
+		self.child = new_child.0;
 	}
 }

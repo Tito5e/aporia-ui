@@ -1,5 +1,6 @@
 use std::{collections::HashSet, ffi::c_void, mem::transmute, ptr::NonNull};
 
+use log::debug;
 use slotmap::new_key_type;
 
 use crate::{
@@ -7,7 +8,6 @@ use crate::{
 		context::{CONTEXT, Context},
 		signal::{Signal, SignalKey, SignalState},
 	},
-	storage::Key,
 	widget::Widget,
 };
 
@@ -54,6 +54,18 @@ impl EffectHandle {
 
 	pub const fn as_ptr(&self) -> Effect {
 		Effect { key: self.key, phase: self.phase }
+	}
+}
+
+impl Drop for EffectHandle {
+	fn drop(&mut self) {
+		for dep in self.deps.iter() {
+			let state: &mut SignalState = CONTEXT.with(|context| unsafe {
+				transmute(context.signals.borrow_mut().get_unchecked_mut(*dep) as &mut SignalState)
+			});
+
+			state.subscribers.remove(&self.as_ptr());
+		}
 	}
 }
 
@@ -106,8 +118,22 @@ impl EffectVTable {
 }
 
 pub struct EffectData {
-	pub(crate) vtable: &'static EffectVTable,
+	pub(crate) vtable: fn(ptr: NonNull<c_void>),
 	pub(crate) ptr: NonNull<c_void>,
+}
+
+impl EffectData {
+	pub(crate) const fn from_reconcile<T: Widget + ReconcilePhase + 'static>(
+		ptr: NonNull<c_void>,
+	) -> Self {
+		Self {
+			ptr,
+			vtable: |ptr| {
+				let widget = unsafe { &mut *ptr.as_ptr().cast::<T>() };
+				widget.on_reconcile_phase();
+			},
+		}
+	}
 }
 
 pub trait ReconcilePhase {

@@ -1,7 +1,7 @@
 use wgpu::{Adapter, Device, Instance, Queue};
 use winit::{application::ApplicationHandler, event::WindowEvent};
 
-use crate::standalone::{initializer::Initializer, state::WindowState};
+use crate::standalone::{context::Context, initializer::Initializer, state::WindowState};
 
 pub(crate) struct AppRunner<F> {
 	pub(crate) initializer: F,
@@ -11,6 +11,7 @@ pub(crate) struct AppRunner<F> {
 	pub(crate) gpu_device: Device,
 	pub(crate) gpu_queue: Queue,
 	pub(crate) gpu_adapter: Adapter,
+	pub(crate) context: Context,
 }
 
 impl<F> ApplicationHandler for AppRunner<F>
@@ -26,6 +27,7 @@ where
 				gpu_adapter: &mut self.gpu_adapter,
 				gpu_device: &mut self.gpu_device,
 				gpu_queue: &mut self.gpu_queue,
+				context: &mut self.context,
 			};
 			(self.initializer)(&mut cx);
 

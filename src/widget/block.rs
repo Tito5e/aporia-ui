@@ -1,7 +1,7 @@
 use crate::{
 	component::{Builder, NoChild},
 	core::geometry::{Constraint, Dimension, Padding, Placement, Size},
-	reactivity::context::Context,
+	standalone::context::Context,
 	storage::WidgetHandle,
 	widget::Widget,
 };
@@ -70,8 +70,8 @@ impl<T: Builder> Block<T> {
 }
 
 impl<T: Builder> Builder for Block<T> {
-	fn build(self) -> WidgetHandle {
-		let child = self.child.map(|child| child.build());
+	fn build(self, cx: &mut Context) -> WidgetHandle {
+		let child = self.child.map(|child| child.build(cx));
 		let block_data = BlockData {
 			row_placement: self.row_placement,
 			col_placement: self.col_placement,

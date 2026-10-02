@@ -2,6 +2,7 @@ pub mod application;
 pub mod component;
 pub mod core;
 pub mod reactivity;
+pub mod reconcile;
 pub mod renderer;
 pub mod standalone;
 pub mod storage;

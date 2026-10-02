@@ -113,7 +113,7 @@ impl Drop for WidgetHandle {
 	}
 }
 
-pub(crate) struct Reservation<T: Widget + 'static> {
+pub struct Reservation<T: Widget + 'static> {
 	ptr: NonNull<T>,
 	ty: &'static WidgetType,
 	_phantom: PhantomData<T>,

@@ -4,9 +4,11 @@ use pollster::FutureExt;
 use wgpu::{DeviceDescriptor, Instance, InstanceDescriptor, RequestAdapterOptions};
 use winit::event_loop::EventLoop;
 
-use crate::standalone::{initializer::Initializer, runner::AppRunner};
+use crate::standalone::{context::Context, initializer::Initializer, runner::AppRunner};
 
+pub(crate) mod context;
 pub(crate) mod initializer;
+pub(crate) mod reactive;
 pub(crate) mod runner;
 pub(crate) mod state;
 
@@ -43,6 +45,7 @@ impl StandaloneApplication {
 			gpu_device: device,
 			gpu_queue: queue,
 			gpu_adapter: adapter,
+			context: Context::new(),
 		}
 	}
 }

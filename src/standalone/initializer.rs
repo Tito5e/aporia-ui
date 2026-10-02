@@ -4,7 +4,10 @@ use wgpu::{
 };
 use winit::{event_loop::ActiveEventLoop, window::WindowId};
 
-use crate::{component::Builder, standalone::state::WindowState};
+use crate::{
+	component::Builder,
+	standalone::{context::Context, state::WindowState},
+};
 
 pub struct Initializer<'a> {
 	pub(crate) gpu_instance: &'a mut Instance,
@@ -14,6 +17,7 @@ pub struct Initializer<'a> {
 
 	pub(crate) event_loop: &'a ActiveEventLoop,
 	pub(crate) states: &'a mut Vec<WindowState>,
+	pub(crate) context: &'a mut Context,
 }
 
 impl<'a> Initializer<'a> {
@@ -25,7 +29,7 @@ impl<'a> Initializer<'a> {
 		let window = self.event_loop.create_window(attributes).ok()?;
 		let id = window.id();
 		debug!("Building Widget");
-		let widget_handle = builder.build();
+		let widget_handle = builder.build(self.context);
 		debug!("Complete");
 
 		let surface = unsafe {

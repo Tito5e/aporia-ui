@@ -1,6 +1,7 @@
 use crate::{
 	component::{Builder, NoChild},
 	core::geometry::{Constraint, Dimension, Padding, Placement, Size},
+	reactivity::Read,
 	standalone::context::Context,
 	storage::WidgetHandle,
 	widget::Widget,
@@ -65,6 +66,24 @@ impl<T: Builder> Block<T> {
 			max_height: self.max_height,
 
 			child: Some(child),
+		}
+	}
+
+	#[inline]
+	pub fn row_placement<P: for<'a> Read<Out<'a> = Placement>>(self, placement: P) -> Block<T> {
+		Block {
+			row_placement: placement.read(),
+			col_placement: self.col_placement,
+
+			padding: self.padding,
+			width: self.width,
+			height: self.height,
+			min_width: self.min_width,
+			min_height: self.min_height,
+			max_width: self.max_width,
+			max_height: self.max_height,
+
+			child: self.child,
 		}
 	}
 }

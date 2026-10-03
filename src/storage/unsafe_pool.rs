@@ -8,6 +8,7 @@ const MAX_CHUNK_BYTES: usize = 64 * 1024;
 /// 最初のチャンクのスロット数(上限は `MAX_CHUNK_BYTES` で頭打ち)
 const INITIAL_CHUNK_SLOTS: usize = 16;
 
+#[derive(Debug)]
 struct Chunk {
 	ptr: NonNull<u8>,
 	layout: Layout,

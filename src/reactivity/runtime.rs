@@ -8,7 +8,7 @@ pub struct Runtime {
 
 impl Runtime {
 	pub fn create() -> NonNull<Runtime> {
-		unsafe { NonNull::from(Box::leak(Box::new(Runtime { pools: HashMap::new() }))) }
+		NonNull::from(Box::leak(Box::new(Runtime { pools: HashMap::new() })))
 	}
 
 	pub unsafe fn destroy(rt: NonNull<Runtime>) {

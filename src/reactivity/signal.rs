@@ -30,11 +30,11 @@ pub struct Signal<T> {
 }
 
 impl<T> Signal<T> {
-	pub fn with<R>(&self, f: impl FnOnce(&T) -> R) -> R {
+	fn with<R>(&self, f: impl FnOnce(&T) -> R) -> R {
 		f(unsafe { &(*self.ptr.as_ptr()).value })
 	}
 
-	pub fn get(&self) -> &T {
+	fn get(&self) -> &T {
 		self.with(|value| unsafe { transmute(value) })
 	}
 

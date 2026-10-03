@@ -24,6 +24,10 @@ impl ReconcileQueue {
 		Self { sink: SinkHeader { mark: Self::mark, cancel: Self::cancel }, items: Vec::new() }
 	}
 
+	pub(crate) const fn header(&self) -> SinkHeader {
+		self.sink
+	}
+
 	unsafe fn mark(sink: *mut SinkHeader, effect: *mut EffectHeader) -> u32 {
 		unsafe {
 			let queue = sink as *mut Self;

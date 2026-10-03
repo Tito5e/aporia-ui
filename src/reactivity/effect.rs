@@ -14,7 +14,7 @@ pub struct EffectHeader {
 
 impl EffectHeader {
 	pub fn begin_run(&mut self) {
-		self.token == NONE;
+		self.token = NONE;
 	}
 }
 

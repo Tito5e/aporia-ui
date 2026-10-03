@@ -1,6 +1,6 @@
 use aporia_ui::{
-	component::{Component, View},
-	reactivity::signal::Signal,
+	component::{Component, View, ViewCx},
+	reactivity::Signal,
 	widget::Block,
 };
 
@@ -9,17 +9,17 @@ pub(crate) struct MainView {
 }
 
 impl MainView {
-	pub fn new() -> Self {
-		Self { count: Signal::new(0) }
+	pub fn new(count: Signal<i32>) -> Self {
+		Self { count }
 	}
 }
 
 impl Component for MainView {
-	fn view(&self) -> View {
-		if self.count.get() == &2 {
-			Block::new().into()
+	fn view(&self, cx: &mut ViewCx) -> View {
+		if cx.read(self.count) == &2 {
+			cx.render(Block::new())
 		} else {
-			Block::new().child(Block::new()).into()
+			cx.render(Block::new().child(Block::new()))
 		}
 	}
 }

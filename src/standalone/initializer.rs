@@ -6,6 +6,7 @@ use winit::{event_loop::ActiveEventLoop, window::WindowId};
 
 use crate::{
 	component::Builder,
+	reactivity::Signal,
 	standalone::{context::Context, state::WindowState},
 };
 
@@ -67,5 +68,9 @@ impl<'a> Initializer<'a> {
 		};
 		self.states.push(state);
 		Some(id)
+	}
+
+	pub fn global_signal<T: 'static>(&mut self, value: T) -> Signal<T> {
+		self.context.global_signal(value)
 	}
 }

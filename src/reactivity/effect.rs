@@ -16,6 +16,18 @@ impl EffectHeader {
 	pub fn begin_run(&mut self) {
 		self.token = NONE;
 	}
+
+	pub fn unsubscribe_all(&mut self) {
+		let self_ptr = self as *mut EffectHeader;
+		for dep in self.deps.drain(..) {
+			unsafe {
+				let subs = &mut (*dep.as_ptr()).subscribers;
+				if let Some(index) = subs.iter().position(|effect| effect.as_ptr() == self_ptr) {
+					subs.swap_remove(index);
+				}
+			}
+		}
+	}
 }
 
 #[repr(C)]

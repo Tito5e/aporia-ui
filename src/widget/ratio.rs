@@ -4,14 +4,14 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum RatioMode {
+pub enum RatioMode {
 	Width,
 	Height,
 	Fit,
 	Fill,
 }
 
-pub(crate) struct Ratio {
+pub struct Ratio {
 	pub row_placement: Placement,
 	pub col_placement: Placement,
 

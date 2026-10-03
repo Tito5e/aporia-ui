@@ -15,6 +15,7 @@ use crate::{
 	widget::Widget,
 };
 
+#[derive(Debug)]
 pub(crate) struct WidgetType {
 	pool: UnsafeCell<UnsafePool>,
 	layout: unsafe fn(NonNull<c_void>, Constraint) -> Size,
@@ -62,6 +63,8 @@ pub struct WidgetHandle {
 }
 
 impl WidgetHandle {
+	#[inline]
+	#[must_use]
 	pub(crate) fn new<T: Widget + 'static>(widget: T) -> Self {
 		let ty = WidgetType::of::<T>();
 		let ptr = unsafe { ty.pool().insert(widget) };
@@ -69,6 +72,8 @@ impl WidgetHandle {
 		Self { ptr: unsafe { NonNull::new_unchecked(ptr).cast() }, ty }
 	}
 
+	#[inline]
+	#[must_use]
 	pub(crate) fn reserve<T: Widget + 'static>() -> Reservation<T> {
 		let ty = WidgetType::of::<T>();
 		let ptr = unsafe { ty.pool().reserve::<T>() };
@@ -77,16 +82,19 @@ impl WidgetHandle {
 	}
 
 	#[inline]
+	#[must_use]
 	pub fn layout(&mut self, constraint: Constraint) -> Size {
 		unsafe { (self.ty.layout)(self.ptr, constraint) }
 	}
 
 	#[inline]
+	#[must_use]
 	pub(crate) fn as_ptr(&self) -> NonNull<c_void> {
 		self.ptr
 	}
 
 	#[inline]
+	#[must_use]
 	pub(crate) unsafe fn get<T: Widget + 'static>(&self) -> &T {
 		self.debug_assert_type::<T>();
 
@@ -94,6 +102,7 @@ impl WidgetHandle {
 	}
 
 	#[inline]
+	#[must_use]
 	pub(crate) unsafe fn get_mut<T: Widget + 'static>(&mut self) -> &mut T {
 		self.debug_assert_type::<T>();
 
@@ -121,10 +130,13 @@ pub struct Reservation<T: Widget + 'static> {
 
 impl<T: Widget + 'static> Reservation<T> {
 	#[inline]
-	pub(crate) fn as_ptr(&self) -> NonNull<c_void> {
-		self.ptr.cast()
+	#[must_use]
+	pub(crate) fn as_ptr(&self) -> NonNull<T> {
+		self.ptr
 	}
 
+	#[inline]
+	#[must_use]
 	pub(crate) fn write(self, widget: T) -> WidgetHandle {
 		let this = ManuallyDrop::new(self);
 		unsafe { this.ptr.as_ptr().write(widget) };

@@ -2,6 +2,8 @@ mod block;
 mod ratio;
 
 pub use block::Block;
+pub use ratio::Ratio;
+pub use ratio::RatioMode;
 
 use crate::core::geometry::{Constraint, Size};
 

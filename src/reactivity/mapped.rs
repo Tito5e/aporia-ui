@@ -31,7 +31,7 @@ pub struct MappedCx {
 
 impl MappedCx {
 	pub const fn new(effect: *mut EffectHeader) -> Self {
-		Self { effect: effect as *mut EffectHeader }
+		Self { effect }
 	}
 
 	fn untracked() -> Self {

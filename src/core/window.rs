@@ -123,24 +123,25 @@ impl Default for WindowConfig {
 	}
 }
 
-impl Into<WindowAttributes> for WindowConfig {
-	fn into(self) -> WindowAttributes {
+impl From<WindowConfig> for WindowAttributes {
+	#[inline(always)]
+	fn from(config: WindowConfig) -> WindowAttributes {
 		let mut attributes = WindowAttributes::default()
 			//	.with_position(self.position.map(|size| size.into()))
-			.with_resizable(self.resizable)
-			.with_title(self.title)
-			.with_maximized(self.maximized)
-			.with_visible(self.visible)
-			.with_transparent(self.transparent)
-			.with_blur(self.blur)
-			.with_decorations(self.decorations)
-			.with_content_protected(self.content_protected)
-			.with_active(self.active);
+			.with_resizable(config.resizable)
+			.with_title(config.title)
+			.with_maximized(config.maximized)
+			.with_visible(config.visible)
+			.with_transparent(config.transparent)
+			.with_blur(config.blur)
+			.with_decorations(config.decorations)
+			.with_content_protected(config.content_protected)
+			.with_active(config.active);
 
-		attributes.inner_size = self.inner_size.map(|size| size.into());
-		attributes.min_inner_size = self.min_inner_size.map(|size| size.into());
-		attributes.max_inner_size = self.max_inner_size.map(|size| size.into());
-		attributes.resize_increments = self.resize_increments.map(|size| size.into());
+		attributes.inner_size = config.inner_size.map(|size| size.into());
+		attributes.min_inner_size = config.min_inner_size.map(|size| size.into());
+		attributes.max_inner_size = config.max_inner_size.map(|size| size.into());
+		attributes.resize_increments = config.resize_increments.map(|size| size.into());
 
 		attributes
 	}
@@ -173,9 +174,9 @@ impl From<LogicalSize> for WindowSize {
 	}
 }
 
-impl Into<winit::dpi::Size> for WindowSize {
-	fn into(self) -> winit::dpi::Size {
-		match self {
+impl From<WindowSize> for winit::dpi::Size {
+	fn from(size: WindowSize) -> winit::dpi::Size {
+		match size {
 			WindowSize::Logical(logical_size) => winit::dpi::Size::Logical(
 				winit::dpi::LogicalSize::new(logical_size.width, logical_size.height),
 			),

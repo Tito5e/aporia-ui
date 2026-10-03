@@ -63,7 +63,7 @@ impl UnsafePool {
 		let slot_align = max_usize(align_of::<T>(), align_of::<*mut u8>());
 		let raw_size = max_usize(size_of::<T>(), size_of::<*mut u8>());
 		// スロットサイズを align の倍数に切り上げる(隣のスロットも必ず整列される)
-		let slot_size = (raw_size + slot_align - 1) / slot_align * slot_align;
+		let slot_size = raw_size.div_ceil(slot_align) * slot_align;
 		let max_cap = max_usize(1, MAX_CHUNK_BYTES / slot_size);
 		Self {
 			free: ptr::null_mut(),
@@ -86,21 +86,26 @@ impl UnsafePool {
 
 	/// 生存している要素数(確保済みで、まだ解放されていないスロット数)
 	#[inline]
+	#[must_use]
 	pub const fn len(&self) -> usize {
 		self.len
 	}
 
 	#[inline]
+	#[must_use]
 	pub const fn is_empty(&self) -> bool {
 		self.len == 0
 	}
 
 	/// 確保済みチャンクの総スロット数
+	#[inline]
+	#[must_use]
 	pub fn capacity(&self) -> usize {
 		self.chunks.iter().map(|c| c.layout.size() / self.slot_size).sum()
 	}
 
 	#[inline]
+	#[must_use]
 	pub fn chunk_count(&self) -> usize {
 		self.chunks.len()
 	}
@@ -206,6 +211,7 @@ impl UnsafePool {
 	}
 
 	/// `ptr` がこのプールのチャンク内のアドレスかどうか(O(チャンク数)、debug 用途)
+	#[must_use]
 	pub fn owns(&self, ptr: *const u8) -> bool {
 		let addr = ptr as usize;
 		self.chunks.iter().any(|c| {

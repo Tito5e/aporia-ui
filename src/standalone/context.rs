@@ -1,11 +1,10 @@
-use std::{ffi::c_void, mem::ManuallyDrop, ptr::NonNull};
+use std::{mem::ManuallyDrop, ptr::NonNull};
 
 use crate::{
 	reactivity::{Signal, effect::EffectHandle, runtime::Runtime, scope::Scope},
-	reconcile::{ReconcileEffect, ReconcileQueue},
+	reconcile::{Reconcile, ReconcileEffect, ReconcileQueue},
 };
 
-// TODO: パフォーマンス計測が必要
 pub struct Context {
 	global_scope: ManuallyDrop<Scope>,
 	rt: NonNull<Runtime>,
@@ -29,13 +28,18 @@ impl Context {
 		self.global_scope.signal(value)
 	}
 
-	pub fn reconcile<T: 'static>(
+	pub fn reconcile<T: Reconcile + 'static>(
 		&mut self,
 		scope: &mut Scope,
-		ptr: NonNull<c_void>,
+		ptr: NonNull<T>,
 	) -> EffectHandle<ReconcileEffect> {
 		let sink = NonNull::from(&mut self.reconcile_queue.header());
-		scope.effect_with_sink(sink, ReconcileEffect {})
+		scope.effect_with_sink(
+			sink,
+			ReconcileEffect::new(unsafe {
+				NonNull::new_unchecked(ptr.as_ptr() as *mut dyn Reconcile)
+			}),
+		)
 	}
 }
 

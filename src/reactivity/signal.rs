@@ -30,11 +30,11 @@ pub struct Signal<T> {
 }
 
 impl<T> Signal<T> {
-	fn with<R>(&self, f: impl FnOnce(&T) -> R) -> R {
+	pub(crate) fn with<R>(&self, f: impl FnOnce(&T) -> R) -> R {
 		f(unsafe { &(*self.ptr.as_ptr()).value })
 	}
 
-	fn get(&self) -> &T {
+	pub(crate) unsafe fn get(&self) -> &T {
 		self.with(|value| unsafe { transmute(value) })
 	}
 
@@ -57,7 +57,7 @@ impl<T: Clone> Source for Signal<T> {
 	type Out = T;
 
 	fn read(&self) -> T {
-		unsafe { (*self.ptr.as_ptr()).value.clone() }
+		unsafe { self.get().clone() }
 	}
 
 	fn subscribe(&self, effect: &mut EffectHeader) -> T {

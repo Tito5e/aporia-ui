@@ -1,15 +1,31 @@
-use std::ptr::null_mut;
+use std::ptr::{NonNull, null_mut};
 
-use crate::reactivity::{
-	effect::{EffectHeader, EffectState},
-	sink::SinkHeader,
+use crate::{
+	reactivity::{
+		effect::{EffectHeader, EffectState},
+		sink::SinkHeader,
+	},
+	standalone::context::Context,
 };
 
-pub struct ReconcileEffect {}
+pub trait Reconcile {
+	fn reconcile(&mut self, cx: &mut Context);
+}
+
+pub struct ReconcileEffect {
+	ptr: NonNull<dyn Reconcile>,
+}
 
 impl ReconcileEffect {
-	fn run(&mut self) {
-		unsafe { todo!("Reconcile isnt implemented") }
+	pub(crate) fn new(ptr: NonNull<dyn Reconcile>) -> Self {
+		Self { ptr }
+	}
+
+	fn run(&mut self, cx: &mut Context) {
+		unsafe {
+			let state = self.ptr.as_mut();
+			state.reconcile(cx);
+		}
 	}
 }
 
@@ -41,7 +57,7 @@ impl ReconcileQueue {
 		unsafe { (&mut (*queue).items)[token as usize] = null_mut() }
 	}
 
-	unsafe fn flush(queue: *mut Self) -> bool {
+	unsafe fn flush(queue: *mut Self, cx: &mut Context) -> bool {
 		unsafe {
 			let mut index = 0;
 			while index < (*queue).items.len() {
@@ -51,7 +67,7 @@ impl ReconcileQueue {
 					continue;
 				}
 				(*state).header.begin_run();
-				(*state).f.run();
+				(*state).f.run(cx);
 			}
 			let ran = index > 0;
 			(*queue).items.clear();

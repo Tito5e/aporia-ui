@@ -109,7 +109,6 @@ impl<T: Builder> Builder for Block<T> {
 	}
 }
 
-// TODO: 制約のOptionをbitflags化し、構造体サイズを削減する
 pub(crate) struct BlockData {
 	pub row_placement: Placement,
 	pub col_placement: Placement,
@@ -147,7 +146,7 @@ impl Widget for BlockData {
 		let child_y = self_y + self.padding.top;
 
 		if let Some(ref mut child) = self.child {
-			child.layout(Constraint::new(
+			let _ = child.layout(Constraint::new(
 				child_x,
 				child_y,
 				self_width - self.padding.left - self.padding.right,

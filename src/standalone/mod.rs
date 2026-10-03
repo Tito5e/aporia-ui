@@ -8,7 +8,6 @@ use crate::standalone::{context::Context, initializer::Initializer, runner::AppR
 
 pub(crate) mod context;
 pub(crate) mod initializer;
-pub(crate) mod reactive;
 pub(crate) mod runner;
 pub(crate) mod state;
 

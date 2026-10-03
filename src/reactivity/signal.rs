@@ -3,7 +3,7 @@ use std::{
 	ptr::{NonNull, addr_of_mut},
 };
 
-use crate::reactivity::{NONE, Read, Subscribe, effect::EffectHeader};
+use crate::reactivity::{NONE, Source, effect::EffectHeader};
 
 #[repr(C)]
 pub struct SignalHeader {
@@ -53,24 +53,23 @@ impl<T> Signal<T> {
 	}
 }
 
-impl<T> Subscribe for Signal<T> {
-	fn subscribe(&self, effect: &mut EffectHeader) {
-		unsafe {
-			let header = addr_of_mut!((*self.ptr.as_ptr()).header);
-			(*header).subscribers.push(NonNull::from(&mut *effect));
-			effect.deps.push(NonNull::new_unchecked(header));
-		}
+impl<T: Clone> Source for Signal<T> {
+	type Out = T;
+
+	fn read(&self) -> T {
+		unsafe { (*self.ptr.as_ptr()).value.clone() }
 	}
-}
 
-impl<T> Read for Signal<T> {
-	type Out<'a>
-		= &'a T
-	where
-		Self: 'a;
+	fn subscribe(&self, effect: &mut EffectHeader) -> T {
+		unsafe {
+			let header = NonNull::new_unchecked(addr_of_mut!((*self.ptr.as_ptr()).header));
+			if !effect.deps.contains(&header) {
+				(*header.as_ptr()).subscribers.push(NonNull::from(&mut *effect));
+				effect.deps.push(header);
+			}
 
-	fn read(&self) -> &T {
-		self.get()
+			(*self.ptr.as_ptr()).value.clone()
+		}
 	}
 }
 

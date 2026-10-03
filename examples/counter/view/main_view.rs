@@ -16,7 +16,7 @@ impl MainView {
 
 impl Component for MainView {
 	fn view(&self, cx: &mut ViewCx) -> View {
-		if cx.read(self.count) == &2 {
+		if cx.read(self.count) == 2 {
 			cx.render(Block::new())
 		} else {
 			cx.render(Block::new().child(Block::new()))

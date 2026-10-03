@@ -2,7 +2,7 @@ use std::{mem::transmute, ptr::addr_of_mut};
 
 use crate::{
 	core::geometry::{Constraint, Size},
-	reactivity::{Read, Signal, Subscribe, effect::EffectHandle, scope::Scope},
+	reactivity::{Signal, Source, effect::EffectHandle, scope::Scope},
 	reconcile::ReconcileEffect,
 	standalone::context::Context,
 	storage::WidgetHandle,
@@ -35,11 +35,9 @@ impl<'a> ViewCx<'a> {
 		self.1.signal(value)
 	}
 
-	pub fn read<T: 'static>(&mut self, signal: Signal<T>) -> &'a T {
+	pub fn read<T: Clone + 'static>(&mut self, signal: Signal<T>) -> T {
 		let header = unsafe { &mut *addr_of_mut!((*self.2.ptr.as_ptr()).header) };
-		signal.subscribe(header);
-
-		unsafe { transmute(signal.read()) }
+		signal.subscribe(header)
 	}
 }
 

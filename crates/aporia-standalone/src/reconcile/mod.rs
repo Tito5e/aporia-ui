@@ -4,7 +4,7 @@ pub use context::ReconcileCx;
 use std::ptr::{NonNull, null_mut};
 
 use crate::{
-	context::StandaloneCx,
+	application::StandaloneCx,
 	reactivity::{
 		effect::{EffectHeader, EffectState},
 		sink::SinkHeader,

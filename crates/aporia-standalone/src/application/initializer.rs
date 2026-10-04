@@ -77,11 +77,11 @@ impl<'a, S> AppInitializer<'a, S> {
 	}
 }
 
-pub struct StateInitializer<'a> {
+pub struct StateInitializerCx<'a> {
 	pub(crate) context: &'a mut StandaloneCx,
 }
 
-impl<'a> StateInitializer<'a> {
+impl<'a> StateInitializerCx<'a> {
 	pub fn global_signal<T: 'static>(&mut self, value: T) -> Signal<T> {
 		self.context.global_signal(value)
 	}

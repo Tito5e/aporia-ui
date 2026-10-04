@@ -2,7 +2,6 @@ use aporia_core::geometry::{Constraint, Size};
 
 use crate::{
 	component::{Component, ViewCx},
-	context::StandaloneCx,
 	reactivity::{effect::EffectHandle, scope::Scope},
 	reconcile::{Reconcile, ReconcileCx, ReconcileEffect},
 	widget::{Widget, WidgetHandle},

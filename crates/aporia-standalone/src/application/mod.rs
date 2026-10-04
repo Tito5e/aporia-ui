@@ -5,7 +5,7 @@ mod window;
 
 pub use context::StandaloneCx;
 pub use initializer::AppInitializer;
-pub use initializer::StateInitializer;
+pub use initializer::StateInitializerCx;
 use pollster::FutureExt;
 pub(crate) use runner::AppRunner;
 
@@ -26,17 +26,17 @@ pub struct StandaloneApplication<S> {
 
 impl Default for StandaloneApplication<NoGlobalState> {
 	fn default() -> Self {
-		let context = StandaloneCx::new();
+		let context = StandaloneCx::no_state();
 
 		Self { context, global_state: NoGlobalState }
 	}
 }
 
 impl<S> StandaloneApplication<S> {
-	pub fn with_state<F: FnMut(&mut StateInitializer) -> S>(mut initializer: F) -> Self {
-		let mut context = StandaloneCx::new();
-		let mut state_cx = StateInitializer { context: &mut context };
+	pub fn with_state<F: FnMut(&mut StateInitializerCx) -> S>(mut initializer: F) -> Self {
+		let mut state_cx = StateInitializerCx { context: &mut context };
 		let global_state = initializer(&mut state_cx);
+		let mut context = StandaloneCx::new();
 
 		Self { context, global_state }
 	}

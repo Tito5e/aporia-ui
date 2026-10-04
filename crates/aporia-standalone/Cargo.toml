@@ -8,6 +8,10 @@ repository = { workspace = true }
 
 [dependencies]
 unsafe-pool = { version = "0.0.1", path = "../unsafe-pool" }
+aporia-core = { version = "0.0.1", path = "../aporia-core" }
+winit = { version = "0.30.13" }
+wgpu = { version = "30.0.1" }
+pollster = { version = "1.0.1" }
 
 [dev-dependencies]
 env_logger = { version = "0.11.11" }

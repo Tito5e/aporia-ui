@@ -1,15 +1,18 @@
+mod context;
+pub use context::ReconcileCx;
+
 use std::ptr::{NonNull, null_mut};
 
 use crate::{
+	context::StandaloneCx,
 	reactivity::{
 		effect::{EffectHeader, EffectState},
 		sink::SinkHeader,
 	},
-	standalone::context::Context,
 };
 
 pub trait Reconcile {
-	fn reconcile(&mut self, cx: &mut Context);
+	fn reconcile(&mut self, cx: &mut ReconcileCx);
 }
 
 pub struct ReconcileEffect {
@@ -23,8 +26,9 @@ impl ReconcileEffect {
 	}
 
 	#[inline(always)]
-	fn run(&mut self, cx: &mut Context) {
-		unsafe { (*self.ptr.as_ptr()).reconcile(cx) };
+	fn run(&mut self, cx: &mut StandaloneCx) {
+		let mut cx = ReconcileCx { cx };
+		unsafe { (*self.ptr.as_ptr()).reconcile(&mut cx) };
 	}
 }
 
@@ -56,7 +60,7 @@ impl ReconcileQueue {
 		unsafe { (&mut (*queue).items)[token as usize] = null_mut() }
 	}
 
-	unsafe fn flush(queue: *mut Self, cx: &mut Context) -> bool {
+	unsafe fn flush(queue: *mut Self, cx: &mut StandaloneCx) -> bool {
 		unsafe {
 			let mut index = 0;
 			while index < (*queue).items.len() {

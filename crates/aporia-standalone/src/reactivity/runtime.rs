@@ -1,6 +1,6 @@
 use std::{any::TypeId, collections::HashMap, ptr::NonNull};
 
-use crate::storage::UnsafePool;
+use unsafe_pool::UnsafePool;
 
 pub struct Runtime {
 	pub(crate) pools: HashMap<TypeId, UnsafePool>,

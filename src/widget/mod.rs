@@ -18,7 +18,3 @@ pub(crate) trait IntrinsicWidth {
 pub(crate) trait IntrinsicHeight {
 	fn intrinsic_height(&self, width: f32) -> f32;
 }
-
-pub trait Widget {
-	fn layout(&mut self, constraint: Constraint) -> Size;
-}

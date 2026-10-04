@@ -1,7 +1,6 @@
-use aporia_ui::{
+use aporia_standalone::{
 	component::{Component, View, ViewCx},
 	reactivity::Signal,
-	widget::Block,
 };
 
 pub(crate) struct MainView {

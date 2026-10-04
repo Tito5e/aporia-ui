@@ -81,9 +81,8 @@ impl WindowState {
 			..Default::default()
 		});
 
-		// Renders a GREEN screen
 		let mut encoder = self.gpu_device.create_command_encoder(&Default::default());
-		// Create the renderpass which will clear the screen.
+
 		let renderpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
 			label: None,
 			color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -103,10 +102,8 @@ impl WindowState {
 
 		// If you wanted to call any drawing commands, they would go here.
 
-		// End the renderpass.
 		drop(renderpass);
 
-		// Submit the command in the queue to execute
 		self.gpu_queue.submit([encoder.finish()]);
 		self.window.pre_present_notify();
 		self.gpu_queue.present(surface_texture);

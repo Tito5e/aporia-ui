@@ -1,10 +1,11 @@
 use wgpu::{Adapter, Device, Instance, Queue};
 use winit::{application::ApplicationHandler, event::WindowEvent};
 
-use crate::standalone::{context::Context, initializer::Initializer, state::WindowState};
+use crate::standalone::{context::Context, initializer::AppInitializer, state::WindowState};
 
-pub(crate) struct AppRunner<F> {
+pub(crate) struct AppRunner<F, S> {
 	pub(crate) initializer: F,
+	pub(crate) global_state: S,
 	pub(crate) states: Vec<WindowState>,
 	pub(crate) initialized: bool,
 	pub(crate) gpu_instance: Instance,
@@ -14,13 +15,13 @@ pub(crate) struct AppRunner<F> {
 	pub(crate) context: Context,
 }
 
-impl<F> ApplicationHandler for AppRunner<F>
+impl<F, S> ApplicationHandler for AppRunner<F, S>
 where
-	F: FnMut(&mut Initializer),
+	F: FnMut(&mut AppInitializer),
 {
 	fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
 		if !self.initialized {
-			let mut cx = Initializer {
+			let mut cx = AppInitializer {
 				event_loop,
 				states: &mut self.states,
 				gpu_instance: &mut self.gpu_instance,

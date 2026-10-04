@@ -1,5 +1,5 @@
 use crate::{
-	component::{Builder, NoChild},
+	component::Builder,
 	core::geometry::{Constraint, Dimension, Padding, Placement, Size},
 	reactivity::Source,
 	standalone::context::Context,
@@ -7,7 +7,7 @@ use crate::{
 	widget::Widget,
 };
 
-pub struct Block<T: Builder> {
+pub struct Block<T> {
 	row_placement: Placement,
 	col_placement: Placement,
 
@@ -23,10 +23,30 @@ pub struct Block<T: Builder> {
 	child: Option<T>,
 }
 
+pub struct NoChild;
+
 impl Block<NoChild> {
 	#[inline]
 	pub fn new() -> Self {
 		Self::default()
+	}
+
+	#[inline]
+	pub fn child<C: Builder>(self, child: C) -> Block<C> {
+		Block {
+			row_placement: self.row_placement,
+			col_placement: self.col_placement,
+
+			padding: self.padding,
+			width: self.width,
+			height: self.height,
+			min_width: self.min_width,
+			min_height: self.min_height,
+			max_width: self.max_width,
+			max_height: self.max_height,
+
+			child: Some(child),
+		}
 	}
 }
 
@@ -85,6 +105,23 @@ impl<T: Builder> Block<T> {
 
 			child: self.child,
 		}
+	}
+}
+
+impl Builder for Block<NoChild> {
+	fn build(self, cx: &mut Context) -> WidgetHandle {
+		WidgetHandle::new(BlockData {
+			row_placement: self.row_placement,
+			col_placement: self.col_placement,
+			padding: self.padding,
+			width: self.width,
+			height: self.height,
+			min_width: self.min_width,
+			min_height: self.min_height,
+			max_width: self.max_width,
+			max_height: self.max_height,
+			child: None,
+		})
 	}
 }
 

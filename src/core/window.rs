@@ -1,7 +1,7 @@
 use winit::window::WindowAttributes;
 
 pub struct WindowConfig {
-	inner_size: Option<WindowSize>,
+	pub inner_size: Option<WindowSize>,
 	min_inner_size: Option<WindowSize>,
 	max_inner_size: Option<WindowSize>,
 	//position: Option,

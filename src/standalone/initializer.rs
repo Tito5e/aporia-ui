@@ -10,7 +10,7 @@ use crate::{
 	standalone::{context::Context, state::WindowState},
 };
 
-pub struct Initializer<'a> {
+pub struct AppInitializer<'a> {
 	pub(crate) gpu_instance: &'a mut Instance,
 	pub(crate) gpu_adapter: &'a mut Adapter,
 	pub(crate) gpu_device: &'a mut Device,
@@ -21,7 +21,7 @@ pub struct Initializer<'a> {
 	pub(crate) context: &'a mut Context,
 }
 
-impl<'a> Initializer<'a> {
+impl<'a> AppInitializer<'a> {
 	pub fn create_window<B: Builder>(
 		&mut self,
 		window: crate::window::Window<B>,
@@ -70,6 +70,16 @@ impl<'a> Initializer<'a> {
 		Some(id)
 	}
 
+	pub fn global_signal<T: 'static>(&mut self, value: T) -> Signal<T> {
+		self.context.global_signal(value)
+	}
+}
+
+pub struct StateInitializer<'a> {
+	pub(crate) context: &'a mut Context,
+}
+
+impl<'a> StateInitializer<'a> {
 	pub fn global_signal<T: 'static>(&mut self, value: T) -> Signal<T> {
 		self.context.global_signal(value)
 	}

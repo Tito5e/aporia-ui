@@ -17,15 +17,14 @@ pub struct ReconcileEffect {
 }
 
 impl ReconcileEffect {
-	pub(crate) fn new(ptr: NonNull<dyn Reconcile>) -> Self {
+	#[inline(always)]
+	pub(crate) const fn new(ptr: NonNull<dyn Reconcile>) -> Self {
 		Self { ptr }
 	}
 
+	#[inline(always)]
 	fn run(&mut self, cx: &mut Context) {
-		unsafe {
-			let state = self.ptr.as_mut();
-			state.reconcile(cx);
-		}
+		unsafe { (*self.ptr.as_ptr()).reconcile(cx) };
 	}
 }
 

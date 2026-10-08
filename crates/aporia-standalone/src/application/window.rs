@@ -66,6 +66,7 @@ impl WindowState {
 			wgpu::CurrentSurfaceTexture::Success(texture) => texture,
 			wgpu::CurrentSurfaceTexture::Occluded | wgpu::CurrentSurfaceTexture::Timeout => return,
 			wgpu::CurrentSurfaceTexture::Suboptimal(texture) => {
+				drop(texture);
 				self.configure_surface(gpu_context);
 				return;
 			}

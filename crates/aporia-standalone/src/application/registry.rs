@@ -5,15 +5,15 @@ use crate::{
 	reconcile::{Reconcile, ReconcileEffect, ReconcileQueue},
 };
 
-pub struct StandaloneCx {
+pub struct Registry<S> {
 	global_scope: ManuallyDrop<Scope>,
 	rt: NonNull<Runtime>,
 
 	/// dirty subscribers
-	pub(crate) reconcile_queue: Box<ReconcileQueue>,
+	pub(crate) reconcile_queue: Box<ReconcileQueue<S>>,
 }
 
-impl StandaloneCx {
+impl<S: 'static> Registry<S> {
 	pub(crate) fn new() -> Self {
 		let rt = Runtime::create();
 		let global_scope = ManuallyDrop::new(Scope::new(rt));
@@ -28,22 +28,22 @@ impl StandaloneCx {
 		self.global_scope.signal(value)
 	}
 
-	pub fn reconcile<T: Reconcile + 'static>(
+	pub fn create_reconciler<T: Reconcile<S> + 'static>(
 		&mut self,
 		scope: &mut Scope,
 		ptr: NonNull<T>,
-	) -> EffectHandle<ReconcileEffect> {
+	) -> EffectHandle<ReconcileEffect<S>> {
 		let sink = NonNull::from(&mut self.reconcile_queue.header());
 		scope.effect_with_sink(
 			sink,
 			ReconcileEffect::new(unsafe {
-				NonNull::new_unchecked(ptr.as_ptr() as *mut dyn Reconcile)
+				NonNull::new_unchecked(ptr.as_ptr() as *mut dyn Reconcile<S>)
 			}),
 		)
 	}
 }
 
-impl Drop for StandaloneCx {
+impl<S> Drop for Registry<S> {
 	fn drop(&mut self) {
 		unsafe {
 			ManuallyDrop::drop(&mut self.global_scope);

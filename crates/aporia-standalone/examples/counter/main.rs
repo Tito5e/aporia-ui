@@ -9,7 +9,7 @@ mod view;
 pub struct AppState {
 	count: Signal<i32>,
 }
-pub type AppContext = ViewCx<AppState>;
+pub type AppContext<'a, 'b> = ViewCx<'a, 'b, AppState>;
 
 pub fn main() {
 	env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();

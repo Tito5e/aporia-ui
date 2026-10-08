@@ -3,6 +3,8 @@ use aporia_standalone::{
 	reactivity::Signal,
 };
 
+use crate::{AppContext, AppState};
+
 pub(crate) struct MainView {
 	count: Signal<i32>,
 }
@@ -13,8 +15,8 @@ impl MainView {
 	}
 }
 
-impl Component for MainView {
-	fn view(&self, cx: &mut ViewCx) -> View {
+impl Component<AppState> for MainView {
+	fn view(&self, cx: &mut AppContext) -> View {
 		if cx.read(self.count) == 2 {
 			cx.render(Block::new())
 		} else {

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::reactivity::{Source, effect::EffectHeader};
 
 #[derive(Clone, Copy)]
@@ -6,6 +8,18 @@ pub struct Const<T>(T);
 impl<T> Const<T> {
 	pub fn new(value: T) -> Self {
 		Self(value)
+	}
+}
+
+pub struct Test {}
+
+impl Test {
+	fn get_or_insert(map: &mut HashMap<u32, String>, k: u32) -> &String {
+		if let Some(v) = map.get(&k) {
+			return v; // 戻り値として借用が関数外に出る
+		}
+		map.insert(k, String::new()); // NLLはここを拒否する
+		map.get(&k).unwrap()
 	}
 }
 

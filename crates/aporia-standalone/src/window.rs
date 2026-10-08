@@ -1,6 +1,8 @@
+use std::marker::PhantomData;
+
 use winit::window::WindowAttributes;
 
-use crate::component::Builder;
+use crate::widget::Mount;
 
 pub struct WindowConfig {
 	pub inner_size: Option<WindowSize>,
@@ -189,15 +191,17 @@ impl From<WindowSize> for winit::dpi::Size {
 	}
 }
 
-pub struct Window<B: Builder> {
-	builder: B,
+pub struct Window<S, M: Mount<S>> {
+	mountable: M,
 
 	title: String,
+
+	_phantom: PhantomData<S>,
 }
 
-impl<B: Builder> Window<B> {
-	pub fn mount(widget: B) -> Self {
-		Window { builder: widget, title: Default::default() }
+impl<S, B: Mount<S>> Window<S, B> {
+	pub fn mount(target: B) -> Self {
+		Window { mountable: target, title: Default::default(), _phantom: PhantomData }
 	}
 
 	#[inline(always)]
@@ -210,6 +214,6 @@ impl<B: Builder> Window<B> {
 	pub(crate) fn into_internal_data(self) -> (WindowAttributes, B) {
 		let attributes = WindowAttributes::default().with_title(self.title);
 
-		(attributes, self.builder)
+		(attributes, self.mountable)
 	}
 }

@@ -7,7 +7,7 @@ use crate::{
 	widget::{Widget, WidgetHandle},
 };
 
-pub(crate) struct ComponentState<C: Component> {
+pub(crate) struct ComponentState<S, C: Component<S>> {
 	// ComponentState must maintain a specific field drop order.
 	//
 	// WidgetHandle and Scope have custom Drop implementations and impose invariants that must be upheld by the caller.
@@ -19,26 +19,25 @@ pub(crate) struct ComponentState<C: Component> {
 	//
 	// Do not change the field declaration order.
 	pub(crate) child: WidgetHandle,
-	pub(crate) reconciler: EffectHandle<ReconcileEffect>,
+	pub(crate) reconciler: EffectHandle<ReconcileEffect<S>>,
 	pub(crate) scope: Scope,
 	pub(crate) component: C,
 }
 
-impl<C: Component> Widget for ComponentState<C> {
+impl<S, C: Component<S>> Widget for ComponentState<S, C> {
 	#[inline(always)]
 	fn layout(&mut self, constraint: Constraint) -> Size {
 		self.child.layout(constraint)
 	}
 }
 
-impl<C: Component> Reconcile for ComponentState<C> {
+impl<S, C: Component<S>> Reconcile<S> for ComponentState<S, C> {
 	#[inline(always)]
-	fn reconcile(&mut self, cx: &mut ReconcileCx) {
+	fn reconcile(&mut self, cx: &mut ReconcileCx<S>) {
 		// Clear dependencies registered during the previous evaluation of the child widget.
 		self.reconciler.unsubscribe_all();
 
-		let mut view_cx =
-			ViewCx { ctx: cx.cx, scope: &mut self.scope, reconciler: &mut self.reconciler };
+		let mut view_cx = ViewCx { cx, scope: &mut self.scope, reconciler: &mut self.reconciler };
 		let child = self.component.view(&mut view_cx);
 
 		self.child = child.0;

@@ -1,72 +1,59 @@
-mod context;
-mod initializer;
-mod runner;
+mod app;
+mod registry;
 mod window;
 
-pub use context::StandaloneCx;
-pub use initializer::AppInitializer;
-pub use initializer::StateInitializerCx;
-use pollster::FutureExt;
-pub(crate) use runner::AppRunner;
+pub(crate) use app::App;
+pub use registry::Registry;
 
 use std::error::Error;
 
-use wgpu::DeviceDescriptor;
-use wgpu::Instance;
-use wgpu::InstanceDescriptor;
-use wgpu::RequestAdapterOptions;
 use winit::event_loop::EventLoop;
 
-pub struct NoGlobalState;
+use crate::{application::app::LaunchCx, reactivity::Signal};
 
 pub struct StandaloneApplication<S> {
-	context: StandaloneCx,
+	registry: Registry<S>,
 	global_state: S,
 }
 
-impl Default for StandaloneApplication<NoGlobalState> {
+impl Default for StandaloneApplication<()> {
 	fn default() -> Self {
-		let context = StandaloneCx::no_state();
+		let registry = Registry::new();
 
-		Self { context, global_state: NoGlobalState }
+		Self { registry, global_state: () }
 	}
 }
 
-impl<S> StandaloneApplication<S> {
-	pub fn with_state<F: FnMut(&mut StateInitializerCx) -> S>(mut initializer: F) -> Self {
-		let mut state_cx = StateInitializerCx { context: &mut context };
-		let global_state = initializer(&mut state_cx);
-		let mut context = StandaloneCx::new();
+impl<S: 'static> StandaloneApplication<S> {
+	pub fn with_state<F: FnMut(&mut InitializeCx<S>) -> S>(mut initializer: F) -> Self {
+		let mut registry = Registry::new();
+		let mut cx = InitializeCx { registry: &mut registry };
+		let global_state = initializer(&mut cx);
 
-		Self { context, global_state }
+		Self { registry, global_state }
 	}
 
 	pub fn run<F>(self, initializer: F) -> Result<(), Box<dyn Error>>
 	where
-		F: FnMut(&mut AppInitializer<S>),
+		F: FnMut(&mut LaunchCx<S>),
 	{
 		let event_loop = EventLoop::new()?;
 
-		let instance = Instance::new(InstanceDescriptor::new_without_display_handle());
-		let adapter_options = RequestAdapterOptions::default();
-		let adapter = instance.request_adapter(&adapter_options).block_on().unwrap();
-		let device_desc = DeviceDescriptor::default();
-		let (device, queue) = adapter.request_device(&device_desc).block_on().unwrap();
-
-		let mut app: AppRunner<F, S> = AppRunner {
-			initializer,
-			states: Vec::new(),
-			initialized: false,
-
-			gpu_instance: instance,
-			gpu_device: device,
-			gpu_queue: queue,
-			gpu_adapter: adapter,
-			global_state: self.global_state,
-			context: self.context,
-		};
+		let mut app: App<F, S> = App::new(initializer, self.global_state, self.registry);
 
 		event_loop.run_app(&mut app)?;
 		Ok(())
+	}
+}
+
+pub struct InitializeCx<'a, S> {
+	registry: &'a mut Registry<S>,
+}
+
+impl<'a, S: 'static> InitializeCx<'a, S> {
+	#[inline]
+	#[must_use]
+	pub fn global_signal<T: 'static>(&mut self, value: T) -> Signal<T> {
+		self.registry.global_signal(value)
 	}
 }

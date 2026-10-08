@@ -12,7 +12,7 @@ pub struct WidgetHandle {
 impl WidgetHandle {
 	#[inline]
 	#[must_use]
-	pub(crate) fn new<T: Widget + 'static>(widget: T) -> Self {
+	pub fn new<T: Widget + 'static>(widget: T) -> Self {
 		let ty = WidgetType::of::<T>();
 		let ptr = unsafe { ty.pool().insert(widget) };
 

@@ -77,7 +77,7 @@ pub struct Dimension {
 
 impl Dimension {
 	#[inline(always)]
-	pub(crate) fn resolve(&self, constraint: f32) -> f32 {
+	pub fn resolve(&self, constraint: f32) -> f32 {
 		constraint * self.percent + self.px
 	}
 

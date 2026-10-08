@@ -7,6 +7,14 @@ use aporia_standalone::{
 	widget::{Mount, Widget, WidgetHandle},
 };
 
+pub struct NoChild;
+
+impl<S> Mount<S> for NoChild {
+	fn mount(self, cx: &mut ReconcileCx<S>) -> WidgetHandle {
+		unreachable!()
+	}
+}
+
 pub struct Block<S, T> {
 	row_placement: Placement,
 	col_placement: Placement,
@@ -25,12 +33,45 @@ pub struct Block<S, T> {
 	_phantom: PhantomData<S>,
 }
 
-pub struct NoChild;
-
-impl<S> Block<S, NoChild> {
+impl<S, T> Block<S, T> {
 	#[inline]
-	pub fn new() -> Self {
-		Self::default()
+	pub fn child<C: Mount<S>>(self, child: C) -> Block<S, C> {
+		Block {
+			row_placement: self.row_placement,
+			col_placement: self.col_placement,
+
+			padding: self.padding,
+			width: self.width,
+			height: self.height,
+			min_width: self.min_width,
+			min_height: self.min_height,
+			max_width: self.max_width,
+			max_height: self.max_height,
+
+			child: Some(child),
+
+			_phantom: PhantomData,
+		}
+	}
+
+	#[inline]
+	pub fn row_placement<P: Source<Out = Placement>>(self, placement: P) -> Block<S, T> {
+		Block {
+			row_placement: placement.read(),
+			col_placement: self.col_placement,
+
+			padding: self.padding,
+			width: self.width,
+			height: self.height,
+			min_width: self.min_width,
+			min_height: self.min_height,
+			max_width: self.max_width,
+			max_height: self.max_height,
+
+			child: self.child,
+
+			_phantom: PhantomData,
+		}
 	}
 }
 
@@ -56,49 +97,7 @@ impl<S> Default for Block<S, NoChild> {
 	}
 }
 
-impl<S, T: Mount<S>> Block<S, T> {
-	#[inline]
-	pub fn child<C: Mount<S>>(self, child: C) -> Block<S, C> {
-		Block {
-			row_placement: self.row_placement,
-			col_placement: self.col_placement,
-
-			padding: self.padding,
-			width: self.width,
-			height: self.height,
-			min_width: self.min_width,
-			min_height: self.min_height,
-			max_width: self.max_width,
-			max_height: self.max_height,
-
-			child: Some(child),
-
-			_phantom: PhantomData,
-		}
-	}
-
-	#[inline]
-	pub fn row_placement<P: Source<Out = Placement>>(self, placement: P) -> Block<T> {
-		Block {
-			row_placement: placement.read(),
-			col_placement: self.col_placement,
-
-			padding: self.padding,
-			width: self.width,
-			height: self.height,
-			min_width: self.min_width,
-			min_height: self.min_height,
-			max_width: self.max_width,
-			max_height: self.max_height,
-
-			child: self.child,
-
-			_phantom: PhantomData,
-		}
-	}
-}
-
-impl<S> Mount<S> for Block<S, NoChild> {
+impl<S, T: Mount<S>> Mount<S> for Block<S, T> {
 	fn mount(self, cx: &mut ReconcileCx<S>) -> WidgetHandle {
 		WidgetHandle::new(BlockData {
 			row_placement: self.row_placement,
@@ -110,29 +109,8 @@ impl<S> Mount<S> for Block<S, NoChild> {
 			min_height: self.min_height,
 			max_width: self.max_width,
 			max_height: self.max_height,
-			child: None,
+			child: self.child.map(|mount| mount.mount(cx)),
 		})
-	}
-}
-
-impl<S, T: Mount<S>> Mount<S> for Block<S, T> {
-	fn mount(self, cx: &mut ReconcileCx<S>) -> WidgetHandle {
-		let child = self.child.map(|child| child.build(cx));
-		let block_data = BlockData {
-			row_placement: self.row_placement,
-			col_placement: self.col_placement,
-			padding: self.padding,
-			width: self.width,
-			height: self.height,
-			min_width: self.min_width,
-			min_height: self.min_height,
-			max_width: self.max_width,
-			max_height: self.max_height,
-
-			child,
-		};
-
-		WidgetHandle::new(block_data)
 	}
 }
 

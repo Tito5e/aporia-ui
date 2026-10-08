@@ -7,7 +7,7 @@ pub use registry::Registry;
 
 use std::error::Error;
 
-use winit::event_loop::EventLoop;
+use winit::event_loop::{ControlFlow, EventLoop};
 
 use crate::{application::app::LaunchCx, reactivity::Signal};
 
@@ -38,6 +38,7 @@ impl<S: 'static> StandaloneApplication<S> {
 		F: FnMut(&mut LaunchCx<S>),
 	{
 		let event_loop = EventLoop::new()?;
+		event_loop.set_control_flow(ControlFlow::Wait);
 
 		let mut app: App<F, S> = App::new(initializer, self.global_state, self.registry);
 

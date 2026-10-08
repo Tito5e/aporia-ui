@@ -1,42 +1,66 @@
 mod context;
 
-use std::borrow::Cow;
-
 pub use context::GpuContext;
 
 use wgpu::{
-	BlendState, Color, ColorTargetState, ColorWrites, CommandEncoderDescriptor, Device, Face,
-	FragmentState, FrontFace, LoadOp, MultisampleState, Operations, PipelineLayoutDescriptor,
-	PolygonMode, PrimitiveState, PrimitiveTopology, RenderPassColorAttachment,
-	RenderPassDescriptor, RenderPipeline, RenderPipelineDescriptor, ShaderModuleDescriptor,
-	ShaderSource, StoreOp, Surface, SurfaceCapabilities, SurfaceConfiguration, SurfaceTargetUnsafe,
-	TextureFormat, TextureView, VertexState,
-	rwh::{HasDisplayHandle, HasWindowHandle},
+	BlendState, Buffer, BufferUsages, Color, ColorTargetState, ColorWrites,
+	CommandEncoderDescriptor, Device, Face, FragmentState, FrontFace, LoadOp, MultisampleState,
+	Operations, PipelineLayoutDescriptor, PolygonMode, PrimitiveState, PrimitiveTopology,
+	RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, RenderPipelineDescriptor,
+	ShaderModuleDescriptor, ShaderSource, StoreOp, TextureFormat, TextureView, VertexState,
+	util::{BufferInitDescriptor, DeviceExt},
 };
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct Vertex {
+	position: [f32; 3],
+	color: [f32; 3],
+}
+
+impl Vertex {
+	fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
+		wgpu::VertexBufferLayout {
+			array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
+			step_mode: wgpu::VertexStepMode::Vertex,
+			attributes: &[
+				wgpu::VertexAttribute {
+					offset: 0,
+					shader_location: 0,
+					format: wgpu::VertexFormat::Float32x3,
+				},
+				wgpu::VertexAttribute {
+					offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+					shader_location: 1,
+					format: wgpu::VertexFormat::Float32x3,
+				},
+			],
+		}
+	}
+}
+
+const VERTICES: &[Vertex] = &[
+	Vertex { position: [0.0, 0.5, 0.0], color: [1.0, 0.0, 0.0] },
+	Vertex { position: [-0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0] },
+	Vertex { position: [0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0] },
+];
 
 pub struct Renderer {
 	render_pipeline: RenderPipeline,
+	temp_buffer: Buffer,
 }
 
 impl Renderer {
 	pub fn new(device: &Device, format: TextureFormat) -> Self {
+		let vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
+			label: Some("Temp Vertex Buffer"),
+			contents: bytemuck::cast_slice(VERTICES),
+			usage: BufferUsages::VERTEX,
+		});
+
 		let shader = device.create_shader_module(ShaderModuleDescriptor {
 			label: Some("Test Triangle Shader"),
-			source: ShaderSource::Wgsl(Cow::Borrowed(
-				r#"
-					@vertex
-					fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> @builtin(position) vec4<f32> {
-						let x = f32(i32(in_vertex_index) - 1);
-						let y = f32(i32(in_vertex_index & 1u) * 2 - 1);
-						return vec4<f32>(x, y, 0.0, 1.0);
-					}
-
-					@fragment
-					fn fs_main() -> @location(0) vec4<f32> {
-						return vec4<f32>(0.2, 0.6, 1.0, 1.0);
-					}
-					"#,
-			)),
+			source: ShaderSource::Wgsl(include_str!("test.wgsl").into()),
 		});
 
 		let render_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
@@ -51,7 +75,7 @@ impl Renderer {
 			vertex: VertexState {
 				module: &shader,
 				entry_point: Some("vs_main"),
-				buffers: &[],
+				buffers: &[Some(Vertex::desc())],
 				compilation_options: Default::default(),
 			},
 			fragment: Some(FragmentState {
@@ -79,7 +103,7 @@ impl Renderer {
 			cache: None,
 		});
 
-		Self { render_pipeline }
+		Self { render_pipeline, temp_buffer: vertex_buffer }
 	}
 
 	pub fn draw(&self, gpu: &GpuContext, view: &TextureView) {
@@ -94,10 +118,7 @@ impl Renderer {
 					view,
 					depth_slice: None,
 					resolve_target: None,
-					ops: Operations {
-						load: LoadOp::Clear(Color { r: 0.1, g: 0.1, b: 0.1, a: 1.0 }),
-						store: StoreOp::Store,
-					},
+					ops: Operations { load: LoadOp::Clear(Color::GREEN), store: StoreOp::Store },
 				})],
 				depth_stencil_attachment: None,
 				timestamp_writes: None,
@@ -106,6 +127,7 @@ impl Renderer {
 			});
 
 			render_pass.set_pipeline(&self.render_pipeline);
+			render_pass.set_vertex_buffer(0, self.temp_buffer.slice(..));
 			render_pass.draw(0..3, 0..1);
 		}
 

@@ -1,13 +1,13 @@
 use aporia_core::geometry::{Constraint, Size};
 
 use crate::{
-	component::{Component, ViewCx},
+	component::{Render, ViewCx},
 	reactivity::{effect::EffectHandle, scope::Scope},
 	reconcile::{Reconcile, ReconcileCx, ReconcileEffect},
 	widget::{Widget, WidgetHandle},
 };
 
-pub(crate) struct ComponentState<S, C: Component<S>> {
+pub(crate) struct ComponentState<S, C: Render<S>> {
 	// ComponentState must maintain a specific field drop order.
 	//
 	// WidgetHandle and Scope have custom Drop implementations and impose invariants that must be upheld by the caller.
@@ -24,14 +24,14 @@ pub(crate) struct ComponentState<S, C: Component<S>> {
 	pub(crate) component: C,
 }
 
-impl<S, C: Component<S>> Widget for ComponentState<S, C> {
+impl<S, C: Render<S>> Widget for ComponentState<S, C> {
 	#[inline(always)]
 	fn layout(&mut self, constraint: Constraint) -> Size {
 		self.child.layout(constraint)
 	}
 }
 
-impl<S, C: Component<S>> Reconcile<S> for ComponentState<S, C> {
+impl<S, C: Render<S>> Reconcile<S> for ComponentState<S, C> {
 	#[inline(always)]
 	fn reconcile(&mut self, cx: &mut ReconcileCx<S>) {
 		// Clear dependencies registered during the previous evaluation of the child widget.

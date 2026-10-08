@@ -31,7 +31,7 @@ impl WidgetHandle {
 		let ty = WidgetType::of::<T>();
 		let ptr = unsafe { ty.pool().reserve::<T>() };
 
-		unsafe { Reservation::from_raw(unsafe { NonNull::new_unchecked(ptr) }, ty) }
+		unsafe { Reservation::from_raw(NonNull::new_unchecked(ptr), ty) }
 	}
 
 	#[inline]

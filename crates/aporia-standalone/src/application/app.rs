@@ -122,7 +122,7 @@ impl<'a, S: 'static> LaunchCx<'a, S> {
 			let id = window.id();
 			let mut cx = ReconcileCx::new(self.registry, self.global_state);
 			let widget = target.mount(&mut cx);
-			let state = WindowState::create(window, widget, self.gpu, self.global_state);
+			let state = WindowState::create(window, widget, self.gpu);
 			self.windows.insert(id, state);
 
 			return Some(id);

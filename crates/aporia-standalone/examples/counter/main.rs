@@ -1,6 +1,9 @@
 use crate::view::main_view::MainView;
 use aporia_standalone::{
-	application::StandaloneApplication, component::ViewCx, reactivity::Signal, window::Window,
+	application::StandaloneApplication,
+	component::{Component, ViewCx},
+	reactivity::Signal,
+	window::Window,
 };
 use env_logger::Env;
 
@@ -21,6 +24,7 @@ pub fn main() {
 	});
 	let _ = application.run(|cx| {
 		let count = cx.global_state().count;
-		cx.create_window(Window::mount(MainView::new(count)).with_title("Counter"));
+		let main_view = MainView::new(count);
+		cx.create_window(Window::mount(Component::new(main_view)).with_title("Counter"));
 	});
 }

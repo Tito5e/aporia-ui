@@ -2,16 +2,11 @@ use wgpu::{
 	CompositeAlphaMode, PresentMode, Surface, SurfaceColorSpace, SurfaceConfiguration,
 	SurfaceTargetUnsafe, TextureFormat, TextureUsages,
 };
-use winit::{
-	dpi::PhysicalSize,
-	window::{Window, WindowId},
-};
+use winit::{dpi::PhysicalSize, window::Window};
 
 use crate::{
-	component::Component,
-	reconcile::ReconcileCx,
 	renderer::{GpuContext, Renderer},
-	widget::{Mount as _, WidgetHandle},
+	widget::WidgetHandle,
 };
 
 pub(crate) struct WindowState {
@@ -25,15 +20,11 @@ pub(crate) struct WindowState {
 }
 
 impl WindowState {
-	pub(crate) fn create<S>(
-		window: Window,
-		widget: WidgetHandle,
-		gpu_context: &GpuContext,
-		global_state: &S,
-	) -> Self {
+	pub(crate) fn create(window: Window, widget: WidgetHandle, gpu_context: &GpuContext) -> Self {
 		let size = window.inner_size();
 
-		let surface_target = unsafe { SurfaceTargetUnsafe::from_window(&window).unwrap() };
+		let surface_target =
+			unsafe { SurfaceTargetUnsafe::from_display_and_window(&window, &window).unwrap() };
 		let surface =
 			unsafe { gpu_context.instance.create_surface_unsafe(surface_target).unwrap() };
 
@@ -58,7 +49,7 @@ impl WindowState {
 			width: self.size.width,
 			height: self.size.height,
 			desired_maximum_frame_latency: 2,
-			present_mode: PresentMode::AutoVsync,
+			present_mode: PresentMode::AutoNoVsync,
 		};
 		self.surface.configure(&gpu_context.device, &config);
 	}
@@ -76,7 +67,7 @@ impl WindowState {
 			wgpu::CurrentSurfaceTexture::Occluded | wgpu::CurrentSurfaceTexture::Timeout => return,
 			wgpu::CurrentSurfaceTexture::Suboptimal(texture) => {
 				self.configure_surface(gpu_context);
-				texture
+				return;
 			}
 			wgpu::CurrentSurfaceTexture::Outdated => {
 				self.configure_surface(gpu_context);

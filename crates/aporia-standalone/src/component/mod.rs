@@ -1,5 +1,7 @@
 mod state;
 
+use std::marker::PhantomData;
+
 pub(crate) use state::ComponentState;
 
 use crate::{
@@ -8,19 +10,30 @@ use crate::{
 	widget::{Mount, WidgetHandle},
 };
 
+pub struct Component<S, R> {
+	render: R,
+	_phantom: PhantomData<S>,
+}
+
+impl<S: 'static, R: Render<S> + 'static> Component<S, R> {
+	pub fn new(render: R) -> Self {
+		Self { render, _phantom: PhantomData }
+	}
+}
+
 pub struct View(WidgetHandle);
 
-pub trait Component<S> {
+pub trait Render<S> {
 	fn view(&self, cx: &mut ViewCx<S>) -> View;
 }
 
-impl<S: 'static, C: Component<S> + 'static> Mount<S> for C {
+impl<S: 'static, R: Render<S> + 'static> Mount<S> for Component<S, R> {
 	fn mount(self, cx: &mut ReconcileCx<S>) -> WidgetHandle {
 		// Reserve heap storage for the component.
 		// Because the component's Reconciler must point back to the component itself, the pointer address must be determined in advance.
 		//
 		// Therefore, use WidgetHandle::reserve instead of the regular WidgetHandle::new
-		let reservation = WidgetHandle::reserve::<ComponentState<S, C>>();
+		let reservation = WidgetHandle::reserve::<ComponentState<S, R>>();
 
 		// The component needs an independent Scope to own the Signal defined in its view function and serve as the parent scope for its own Reconciler effect.
 		let mut scope = cx.create_scope();
@@ -28,9 +41,14 @@ impl<S: 'static, C: Component<S> + 'static> Mount<S> for C {
 		// The component has a Reconciler effect responsible for triggering its own re-evaluation.
 		let mut reconciler = cx.create_reconciler(&mut scope, reservation.as_ptr());
 		let mut view_cx = ViewCx { cx, scope: &mut scope, reconciler: &mut reconciler };
-		let child = self.view(&mut view_cx);
+		let child = self.render.view(&mut view_cx);
 
-		reservation.write(ComponentState { component: self, scope, child: child.0, reconciler })
+		reservation.write(ComponentState {
+			component: self.render,
+			scope,
+			child: child.0,
+			reconciler,
+		})
 	}
 }
 

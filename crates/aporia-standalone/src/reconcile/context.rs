@@ -25,7 +25,7 @@ impl<'a, S: 'static> ReconcileCx<'a, S> {
 	}
 
 	#[inline]
-	pub fn create_reconciler<T: Reconcile<S> + 'static>(
+	pub fn create_reconciler<T: Reconcile<State = S> + 'static>(
 		&mut self,
 		scope: &mut Scope,
 		ptr: NonNull<T>,

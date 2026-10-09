@@ -8,17 +8,19 @@ use crate::reactivity::{
 	sink::SinkHeader,
 };
 
-pub trait Reconcile<S> {
-	fn reconcile<'a, 'b>(&'a mut self, cx: &'a mut ReconcileCx<'b, S>);
+pub trait Reconcile {
+	type State;
+
+	fn reconcile<'a, 'b>(&'a mut self, cx: &'a mut ReconcileCx<'b, Self::State>);
 }
 
 pub struct ReconcileEffect<S> {
-	ptr: NonNull<dyn Reconcile<S>>,
+	ptr: NonNull<dyn Reconcile<State = S>>,
 }
 
 impl<S> ReconcileEffect<S> {
 	#[inline(always)]
-	pub(crate) const fn new(ptr: NonNull<dyn Reconcile<S>>) -> Self {
+	pub(crate) const fn new(ptr: NonNull<dyn Reconcile<State = S>>) -> Self {
 		Self { ptr }
 	}
 

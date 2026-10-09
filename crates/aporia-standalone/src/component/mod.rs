@@ -1,33 +1,30 @@
-mod state;
-
-use std::marker::PhantomData;
-
-pub(crate) use state::ComponentState;
+use aporia_core::geometry::{Constraint, Size};
 
 use crate::{
 	reactivity::{Signal, Source, effect::EffectHandle, scope::Scope},
-	reconcile::{ReconcileCx, ReconcileEffect},
-	widget::{Mount, WidgetHandle},
+	reconcile::{Reconcile, ReconcileCx, ReconcileEffect},
+	widget::{Mount, Widget, WidgetHandle},
 };
 
-pub struct Component<S, R> {
+pub struct Component<R> {
 	render: R,
-	_phantom: PhantomData<S>,
 }
 
-impl<S: 'static, R: Render<S> + 'static> Component<S, R> {
+impl<R: Render + 'static> Component<R> {
 	pub fn new(render: R) -> Self {
-		Self { render, _phantom: PhantomData }
+		Self { render }
 	}
 }
 
 pub struct View(WidgetHandle);
 
-pub trait Render<S> {
-	fn view(&self, cx: &mut ViewCx<S>) -> View;
+pub trait Render {
+	type State;
+
+	fn view(&self, cx: &mut ViewCx<Self::State>) -> View;
 }
 
-impl<S: 'static, R: Render<S> + 'static> Mount<S> for Component<S, R> {
+impl<S: 'static, R: Render<State = S> + 'static> Mount<S> for Component<R> {
 	fn mount(self, cx: &mut ReconcileCx<S>) -> WidgetHandle {
 		// Reserve heap storage for the component.
 		// Because the component's Reconciler must point back to the component itself, the pointer address must be determined in advance.
@@ -81,5 +78,44 @@ impl<'a, 'b, S: 'static> ViewCx<'a, 'b, S> {
 	#[must_use]
 	pub fn global_state(&self) -> &S {
 		self.cx.global_state()
+	}
+}
+
+pub(crate) struct ComponentState<S, C: Render<State = S>> {
+	// ComponentState must maintain a specific field drop order.
+	//
+	// WidgetHandle and Scope have custom Drop implementations and impose invariants that must be upheld by the caller.
+	// These invariants are fairly complex, but they can be safely satisfied by ensuring that fields are dropped in the reverse order of their declaration.
+	//
+	// Therefore, the required drop order is:
+	//
+	// child -> reconciler -> scope -> component
+	//
+	// Do not change the field declaration order.
+	pub(crate) child: WidgetHandle,
+	pub(crate) reconciler: EffectHandle<ReconcileEffect<S>>,
+	pub(crate) scope: Scope,
+	pub(crate) component: C,
+}
+
+impl<S, C: Render<State = S>> Widget for ComponentState<S, C> {
+	#[inline(always)]
+	fn layout(&mut self, constraint: Constraint) -> Size {
+		self.child.layout(constraint)
+	}
+}
+
+impl<S, C: Render<State = S>> Reconcile for ComponentState<S, C> {
+	type State = S;
+
+	#[inline(always)]
+	fn reconcile(&mut self, cx: &mut ReconcileCx<S>) {
+		// Clear dependencies registered during the previous evaluation of the child widget.
+		self.reconciler.unsubscribe_all();
+
+		let mut view_cx = ViewCx { cx, scope: &mut self.scope, reconciler: &mut self.reconciler };
+		let child = self.component.view(&mut view_cx);
+
+		self.child = child.0;
 	}
 }

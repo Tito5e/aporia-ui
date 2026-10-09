@@ -27,6 +27,7 @@ impl GpuContext {
 		Ok(Self { instance, adapter, device, queue })
 	}
 
+	#[allow(clippy::new_without_default)]
 	pub fn new() -> Self {
 		pollster::block_on(Self::new_async()).expect("Failed to create GpuContext.")
 	}

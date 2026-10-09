@@ -16,7 +16,9 @@ impl MainView {
 	}
 }
 
-impl Render<AppState> for MainView {
+impl Render for MainView {
+	type State = AppState;
+
 	fn view(&self, cx: &mut AppContext) -> View {
 		if cx.read(self.count) == 2 {
 			cx.render(Block::default())

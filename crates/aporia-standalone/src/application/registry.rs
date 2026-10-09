@@ -28,7 +28,7 @@ impl<S: 'static> Registry<S> {
 		self.global_scope.signal(value)
 	}
 
-	pub fn create_reconciler<T: Reconcile<S> + 'static>(
+	pub fn create_reconciler<T: Reconcile<State = S> + 'static>(
 		&mut self,
 		scope: &mut Scope,
 		ptr: NonNull<T>,
@@ -37,7 +37,7 @@ impl<S: 'static> Registry<S> {
 		scope.effect_with_sink(
 			sink,
 			ReconcileEffect::new(unsafe {
-				NonNull::new_unchecked(ptr.as_ptr() as *mut dyn Reconcile<S>)
+				NonNull::new_unchecked(ptr.as_ptr() as *mut dyn Reconcile<State = S>)
 			}),
 		)
 	}
